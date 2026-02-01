@@ -28,7 +28,7 @@ export function DatePicker({ date, setDate, className = '', required = false }: 
             required={required}
             value={value}
             onChange={handleChange}
-            className={`w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark] ${className}`}
+            className={`w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-radiko-blue ${className}`}
         />
     );
 }

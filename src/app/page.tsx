@@ -17,14 +17,14 @@ export default function Home() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
             ダッシュボード
           </h1>
-          <p className="text-slate-400 mt-1">録音状況の概要</p>
+          <p className="text-slate-500 mt-1">録音状況の概要</p>
         </div>
         <Link
           href="/schedules/new"
-          className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 sm:py-2 rounded-xl font-medium transition-all shadow-lg shadow-blue-900/40"
+          className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-radiko-blue hover:bg-sky-400 text-white px-6 py-3 sm:py-2 rounded-xl font-bold transition-all shadow-lg shadow-blue-100"
         >
           <Plus className="w-5 h-5" />
           <span>新規予約</span>
@@ -34,25 +34,25 @@ export default function Home() {
 
       {/* Stats Cards (Simple) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
           <div className="flex items-center space-x-4">
-            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+            <div className="p-3 bg-blue-50 rounded-xl text-radiko-blue">
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-slate-400 text-sm font-medium">予約中のスケジュール</div>
-              <div className="text-2xl font-bold text-white">{schedules.length}</div>
+              <div className="text-slate-500 text-sm font-medium">予約中のスケジュール</div>
+              <div className="text-2xl font-bold text-slate-800">{schedules.length}</div>
             </div>
           </div>
         </div>
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
           <div className="flex items-center space-x-4">
-            <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
+            <div className="p-3 bg-purple-50 rounded-xl text-purple-600">
               <Disc className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-slate-400 text-sm font-medium">録音済みファイル</div>
-              <div className="text-2xl font-bold text-white">{(db.prepare('SELECT COUNT(*) as count FROM records').get() as { count: number }).count}</div>
+              <div className="text-slate-500 text-sm font-medium">録音済みファイル</div>
+              <div className="text-2xl font-bold text-slate-800">{(db.prepare('SELECT COUNT(*) as count FROM records').get() as { count: number }).count}</div>
             </div>
           </div>
         </div>
@@ -61,18 +61,18 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Schedules */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-white">今後の予約</h2>
-            <Link href="/schedules" className="text-sm text-blue-400 hover:text-blue-300">すべて見る</Link>
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-xl font-bold text-slate-800">今後の予約</h2>
+            <Link href="/schedules" className="text-sm font-bold text-radiko-blue hover:text-sky-500">すべて見る</Link>
           </div>
           <ScheduleList schedules={schedules} />
         </div>
 
         {/* Recent Recordings */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-white">最近の録音</h2>
-            <Link href="/records" className="text-sm text-blue-400 hover:text-blue-300">すべて見る</Link>
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-xl font-bold text-slate-800">最近の録音</h2>
+            <Link href="/records" className="text-sm font-bold text-radiko-blue hover:text-sky-500">すべて見る</Link>
           </div>
           <RecordList records={records} />
         </div>

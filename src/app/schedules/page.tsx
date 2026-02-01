@@ -27,19 +27,19 @@ export default function SchedulesPage() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-white">予約一覧</h1>
+                <h1 className="text-2xl font-bold text-slate-800">予約一覧</h1>
                 <Link
                     href="/schedules/new"
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all"
+                    className="bg-radiko-blue hover:bg-sky-400 text-white px-6 py-2 rounded-xl flex items-center space-x-2 transition-all font-bold shadow-lg shadow-blue-100"
                 >
                     <Plus className="w-4 h-4" />
                     <span>新規予約</span>
                 </Link>
             </div>
 
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+            <div className="">
                 {loading ? (
-                    <div className="text-slate-500">読み込み中...</div>
+                    <div className="text-slate-400 font-bold">読み込み中...</div>
                 ) : (
                     <ScheduleList schedules={schedules} />
                 )}

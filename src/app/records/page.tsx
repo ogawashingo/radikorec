@@ -24,12 +24,12 @@ export default function RecordsPage() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-white">録音リスト</h1>
+                <h1 className="text-2xl font-bold text-slate-800">録音リスト</h1>
             </div>
 
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+            <div className="">
                 {loading ? (
-                    <div className="text-slate-500">読み込み中...</div>
+                    <div className="text-slate-400 font-bold">読み込み中...</div>
                 ) : (
                     <RecordList records={records} />
                 )}

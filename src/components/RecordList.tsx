@@ -3,15 +3,23 @@
 import { Record } from '@/types';
 import { Trash2, Play, Download, Pause, Folder, ChevronRight, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAudio } from '@/context/AudioContext';
+import { twMerge } from 'tailwind-merge';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export function RecordList({ records }: { records: Record[] }) {
   const router = useRouter();
   const { currentRecord, isPlaying, playRecord, togglePlay } = useAudio();
+  const [optimisticRecords, setOptimisticRecords] = useState(records);
+
+  useEffect(() => {
+    setOptimisticRecords(records);
+  }, [records]);
 
   // Grouping state
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [deleteFilename, setDeleteFilename] = useState<string | null>(null);
 
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups);
@@ -27,7 +35,7 @@ export function RecordList({ records }: { records: Record[] }) {
     const groups: { [key: string]: Record[] } = {};
     const noTitleKey = 'その他';
 
-    records.forEach(record => {
+    optimisticRecords.forEach(record => {
       const key = record.title || noTitleKey;
       if (!groups[key]) {
         groups[key] = [];
@@ -46,12 +54,24 @@ export function RecordList({ records }: { records: Record[] }) {
       title: key,
       items: groups[key].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     }));
-  }, [records]);
+  }, [optimisticRecords]);
 
-  const handleDelete = async (filename: string) => {
-    if (!confirm('本当に削除してもよろしいですか？ ファイルは完全に削除されます。')) return;
-    await fetch(`/api/records/${filename}`, { method: 'DELETE' });
-    router.refresh();
+  const executeDelete = async () => {
+    if (!deleteFilename) return;
+
+    // Optimistic
+    const previous = optimisticRecords;
+    setOptimisticRecords(prev => prev.filter(r => r.filename !== deleteFilename));
+    setDeleteFilename(null);
+
+    try {
+      await fetch(`/api/records/${deleteFilename}`, { method: 'DELETE' });
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      setOptimisticRecords(previous);
+      alert('削除に失敗しました');
+    }
   };
 
   const isThisPlaying = (record: Record) => {
@@ -59,53 +79,60 @@ export function RecordList({ records }: { records: Record[] }) {
   };
 
 
-  if (records.length === 0) {
+  if (optimisticRecords.length === 0) {
     return <div className="text-slate-500 text-sm">録音ファイルは見つかりませんでした。</div>;
   }
 
   return (
     <div className="space-y-4">
       {groupedRecords.map((group) => (
-        <div key={group.title} className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/30">
+        <div key={group.title} className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
           <button
             onClick={() => toggleGroup(group.title)}
-            className="w-full flex items-center justify-between p-4 bg-slate-900 hover:bg-slate-800 transition-colors"
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors"
           >
-            <div className="flex items-center space-x-3">
-              <Folder className="w-5 h-5 text-blue-400" />
-              <span className="font-bold text-slate-200">{group.title}</span>
-              <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
+            <div className="flex items-center space-x-3 text-left">
+              <div className="p-2 bg-blue-50 rounded-xl">
+                <Folder className="w-5 h-5 text-radiko-blue" />
+              </div>
+              <span className="font-bold text-slate-800">{group.title}</span>
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                 {group.items.length}
               </span>
             </div>
             {expandedGroups.has(group.title) ? (
-              <ChevronDown className="w-5 h-5 text-slate-500" />
+              <ChevronDown className="w-5 h-5 text-slate-300" />
             ) : (
-              <ChevronRight className="w-5 h-5 text-slate-500" />
+              <ChevronRight className="w-5 h-5 text-slate-300" />
             )}
           </button>
 
           {expandedGroups.has(group.title) && (
-            <div className="divide-y divide-slate-800/50 border-t border-slate-800">
+            <div className="divide-y divide-slate-100 border-t border-slate-100">
               {group.items.map((record) => (
-                <div key={record.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-800/50 transition-colors pl-6">
+                <div key={record.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50/50 transition-colors pl-6">
                   <div className="flex items-start sm:items-center space-x-4 w-full">
                     <button
                       onClick={() => playRecord(record)}
-                      className="w-10 h-10 sm:w-8 sm:h-8 shrink-0 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all border border-slate-700 hover:border-blue-500"
+                      className={twMerge(
+                        "w-10 h-10 sm:w-9 sm:h-9 shrink-0 rounded-full flex items-center justify-center transition-all border shadow-sm",
+                        isThisPlaying(record)
+                          ? "bg-radiko-blue text-white border-radiko-blue shadow-blue-200"
+                          : "bg-white text-slate-400 border-slate-200 hover:border-radiko-blue hover:text-radiko-blue"
+                      )}
                     >
                       {isThisPlaying(record) ? <Pause className="w-5 h-5 sm:w-4 sm:h-4" /> : <Play className="w-5 h-5 sm:w-4 sm:h-4 ml-0.5" />}
                     </button>
 
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-slate-300 break-words line-clamp-2 md:line-clamp-1">
+                      <div className="text-sm font-bold text-slate-800 break-words line-clamp-2 md:line-clamp-1">
                         {record.filename}
                       </div>
-                      <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                        <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] uppercase">{record.station_id}</span>
-                        <span>{new Date(record.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                        <span className="hidden sm:inline opacity-30">•</span>
-                        <span>{
+                      <div className="text-[10px] text-slate-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 font-bold">
+                        <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase border border-slate-200">{record.station_id}</span>
+                        <span className="mt-0.5 font-medium">{new Date(record.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="hidden sm:inline opacity-30 mt-0.5">•</span>
+                        <span className="mt-0.5 font-medium">{
                           record.size < 1024 * 1024
                             ? `${Math.round(record.size / 1024)} KB`
                             : `${(record.size / 1024 / 1024).toFixed(1)} MB`
@@ -113,23 +140,23 @@ export function RecordList({ records }: { records: Record[] }) {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 w-full sm:w-auto justify-end border-t border-slate-800/50 sm:border-0 pt-2 sm:pt-0">
+                  <div className="flex items-center space-x-2 w-full sm:w-auto justify-end border-t border-slate-100 sm:border-0 pt-2 sm:pt-0">
                     <a
                       href={`/api/records/${record.filename}?download=true`}
                       download
-                      className="flex-1 sm:flex-none p-3 sm:p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-950/30 rounded-lg transition-colors flex items-center justify-center border border-slate-800 sm:border-0"
+                      className="flex-1 sm:flex-none p-2.5 text-slate-400 hover:text-radiko-blue hover:bg-blue-50 rounded-xl transition-all flex items-center justify-center border border-slate-100 sm:border-transparent"
                       title="ダウンロード"
                     >
                       <Download className="w-5 h-5 sm:w-4 sm:h-4" />
-                      <span className="sm:hidden ml-2 text-sm">保存</span>
+                      <span className="sm:hidden ml-2 text-sm font-bold">保存</span>
                     </a>
                     <button
-                      onClick={() => handleDelete(record.filename)}
-                      className="flex-1 sm:flex-none p-3 sm:p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors flex items-center justify-center border border-slate-800 sm:border-0"
+                      onClick={() => setDeleteFilename(record.filename)}
+                      className="flex-1 sm:flex-none p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all flex items-center justify-center border border-slate-100 sm:border-transparent"
                       title="削除"
                     >
                       <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
-                      <span className="sm:hidden ml-2 text-sm">削除</span>
+                      <span className="sm:hidden ml-2 text-sm font-bold">削除</span>
                     </button>
                   </div>
                 </div>
@@ -138,6 +165,14 @@ export function RecordList({ records }: { records: Record[] }) {
           )}
         </div>
       ))}
+      <ConfirmDialog
+        isOpen={!!deleteFilename}
+        onClose={() => setDeleteFilename(null)}
+        onConfirm={executeDelete}
+        title="ファイルの削除"
+        message="本当に削除してもよろしいですか？ ファイルは完全に削除されます。"
+        isDestructive={true}
+      />
     </div>
   );
 }

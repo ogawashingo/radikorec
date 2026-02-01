@@ -33,13 +33,13 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
             {/* Sidebar */}
             <div className={twMerge(
-                "fixed inset-y-0 left-0 z-50 flex flex-col h-full w-64 bg-slate-900 border-r border-slate-800 transition-transform duration-300 lg:static lg:translate-x-0",
+                "fixed inset-y-0 left-0 z-50 flex flex-col h-full w-64 bg-white border-r border-slate-200 transition-transform duration-300 lg:static lg:translate-x-0",
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="p-6 flex items-center justify-between border-b border-slate-800">
+                <div className="p-6 flex items-center justify-between border-b border-slate-100">
                     <div className="flex items-center space-x-2">
-                        <Radio className="w-8 h-8 text-blue-400" />
-                        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
+                        <Radio className="w-8 h-8 text-radiko-blue" />
+                        <span className="text-xl font-bold text-slate-900">
                             RadikoRec
                         </span>
                     </div>
@@ -55,8 +55,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                                 className={twMerge(
                                     "flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200",
                                     isActive
-                                        ? "bg-blue-600 text-white shadow-lg shadow-blue-900/50"
-                                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                        ? "bg-radiko-blue text-white shadow-lg shadow-blue-200"
+                                        : "text-slate-500 hover:bg-slate-50 hover:text-radiko-blue"
                                 )}
                             >
                                 <item.icon className="w-5 h-5" />
@@ -65,8 +65,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                         );
                     })}
                 </nav>
-                <div className="p-4 border-t border-slate-800">
-                    <div className="text-xs text-slate-500 text-center">
+                <div className="p-4 border-t border-slate-100">
+                    <div className="text-xs text-slate-400 text-center">
                         Radiko Recorder System
                     </div>
                 </div>
