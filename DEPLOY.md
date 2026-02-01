@@ -1,10 +1,10 @@
-# Deployment Guide (Raspberry Pi)
+# Deployment Guide
 
-このアプリケーションを Raspberry Pi にデプロイして実行するための手順です。
+このアプリケーションを実行するための手順です。
 
 ## 1. 前提条件 (Prerequisites)
 
-Raspberry Pi 上で以下のソフトウェアが必要です。
+デプロイ先（サーバー等）で以下のソフトウェアが必要です。
 
 - **Node.js**: v18以上推奨 (v20などLTS版推奨)
 - **Git**
@@ -33,28 +33,29 @@ sudo apt install -y nodejs
 
 ### 方法A: Git経由 (推奨)
 
-Raspberry Pi 上でリポジトリをクローンします。
+デプロイ先でリポジトリをクローンします。
 
 ```bash
-git clone <your-repository-url> radikorec
+git clone https://github.com/ogawashingo/radikorec.git radikorec
 cd radikorec
 ```
+
 
 ※ まだリポジトリがない場合は、ローカルからファイルを転送してください（方法B）。
 
 ### 方法B: ファイル転送 (rsync/scp)
 
-ローカルマシン (Mac) から Raspberry Pi へファイルをコピーします。
+ローカルマシン (Mac) からデプロイ先へファイルをコピーします。
 (`node_modules`, `.next`, `.git` は除外して転送し、Pi上でインストール・ビルドするのが安全です)
 
 ```bash
 # ローカルマシンで実行
-rsync -avz --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '*.db' --exclude '*.sqlite' ./ pi@<IP_ADDRESS>:~/radikorec
+rsync -avz --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '*.db' --exclude '*.sqlite' ./ <USER>@<IP_ADDRESS>:~/radikorec
 ```
 
 ## 3. インストール & ビルド
 
-Raspberry Pi 上で以下を実行します。
+デプロイ先で以下を実行します。
 
 ```bash
 cd ~/radikorec
@@ -70,14 +71,14 @@ npm run build
 npm start
 ```
 
-ブラウザから `http://<RASPBERRY_PI_IP>:3000` にアクセスできれば成功です。
+ブラウザから `http://<SERVER_IP>:3000` にアクセスできれば成功です。
 試しに録音を行い、正常に動作するか確認してください。
 
 ### 方法A: .envファイルを作成する (推奨)
 プロジェクトルートに `.env` ファイルを作成して設定を保存します。この方法は再起動後も設定が維持されます。
 
 ```bash
-# Raspberry Pi上で実行
+# デプロイ先で実行
 cd ~/radikorec
 nano .env
 ```
@@ -121,5 +122,5 @@ pm2 startup
 ## 6. トラブルシューティング
 
 - **録音が始まらない**: `pm2 logs radikorec` でログを確認してください。
-- **SQLiteのエラー**: `npm install` を実行した環境と実行環境のアーキテクチャが異なると発生します。必ず Raspberry Pi 上で `npm install` (または `npm rebuild`) を行ってください。
+- **SQLiteのエラー**: `npm install` を実行した環境と実行環境のアーキテクチャが異なると発生します。必ずデプロイ先の環境で `npm install` (または `npm rebuild`) を行ってください。
 - **ffmpegが見つからない**: `PATH` が通っているか確認してください (`which ffmpeg`)。
