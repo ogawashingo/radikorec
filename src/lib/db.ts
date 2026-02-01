@@ -19,6 +19,7 @@ export function initDB() {
       recurring_pattern TEXT,   -- "weekly" or null
       day_of_week INTEGER,      -- 0=Sun, 1=Mon... 6=Sat (Required if recurring_pattern='weekly')
       status TEXT DEFAULT 'pending',
+      error_message TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -46,6 +47,10 @@ export function initDB() {
 
   try {
     db.exec("ALTER TABLE records ADD COLUMN title TEXT");
+  } catch (e) { /* ignore */ }
+
+  try {
+    db.exec("ALTER TABLE schedules ADD COLUMN error_message TEXT");
   } catch (e) { /* ignore */ }
 }
 

@@ -49,7 +49,7 @@ cd radikorec
 
 ```bash
 # ローカルマシンで実行
-rsync -avz --exclude 'node_modules' --exclude '.next' --exclude '.git' ./ pi@<IP_ADDRESS>:~/radikorec
+rsync -avz --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '*.db' --exclude '*.sqlite' ./ pi@<IP_ADDRESS>:~/radikorec
 ```
 
 ## 3. インストール & ビルド

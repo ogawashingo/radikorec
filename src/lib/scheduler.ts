@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { db } from '@/lib/db';
 import { recordRadiko } from '@/lib/recorder';
+import { sendDiscordNotification, formatFileSize } from '@/lib/notifier';
 
 // 開発中の重複初期化を防ぐためのグローバル参照
 let isSchedulerRunning = false;
@@ -91,18 +92,45 @@ export function initScheduler() {
             }
 
             recordRadiko(s.station_id, s.duration, s.title, s.id, recStartTime)
-                .then(() => {
+                .then((res: any) => {
                     console.log(`Schedule completed: ${s.id}`);
                     if (!s.recurring_pattern) {
                         db.prepare("UPDATE schedules SET status = 'completed' WHERE id = ?").run(s.id);
                     }
+
+                    // Send Discord notification
+                    sendDiscordNotification(`✅ 録音完了: ${s.title || s.station_id}`, {
+                        title: s.title || '無題の番組',
+                        color: 0x00ff00, // Green
+                        fields: [
+                            { name: '放送局', value: s.station_id, inline: true },
+                            { name: 'サイズ', value: formatFileSize(res.size || 0), inline: true },
+                            { name: '録音時間', value: `${s.duration}分`, inline: true }
+                        ],
+                        timestamp: new Date().toISOString()
+                    });
                 })
                 .catch(err => {
                     console.error('Recording error:', err);
+                    const errorMsg = err instanceof Error ? err.message : String(err);
                     if (!s.recurring_pattern) {
-                        db.prepare("UPDATE schedules SET status = 'failed' WHERE id = ?").run(s.id);
+                        db.prepare("UPDATE schedules SET status = 'failed', error_message = ? WHERE id = ?")
+                            .run(errorMsg, s.id);
                     }
+
+                    // Send Discord notification
+                    sendDiscordNotification(`❌ 録音失敗: ${s.title || s.station_id}`, {
+                        title: s.title || '無題の番組',
+                        color: 0xff0000, // Red
+                        description: `エラー内容: \`\`\`${errorMsg}\`\`\``,
+                        fields: [
+                            { name: '放送局', value: s.station_id, inline: true },
+                            { name: '録音時間', value: `${s.duration}分`, inline: true }
+                        ],
+                        timestamp: new Date().toISOString()
+                    });
                 });
+
         }
     });
 }

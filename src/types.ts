@@ -7,6 +7,7 @@ export interface Schedule {
     recurring_pattern?: string;
     day_of_week?: number;
     status: 'pending' | 'processing' | 'completed' | 'failed';
+    error_message?: string;
     created_at: string;
 }
 

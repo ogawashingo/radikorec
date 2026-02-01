@@ -15,21 +15,22 @@ export default function Home() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+          <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
             ダッシュボード
           </h1>
           <p className="text-slate-400 mt-1">録音状況の概要</p>
         </div>
         <Link
           href="/schedules/new"
-          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 sm:py-2 rounded-xl font-medium transition-all shadow-lg shadow-blue-900/40"
         >
           <Plus className="w-5 h-5" />
           <span>新規予約</span>
         </Link>
       </div>
+
 
       {/* Stats Cards (Simple) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

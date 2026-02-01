@@ -3,12 +3,12 @@
 import { Record } from '@/types';
 import { Trash2, Play, Download, Pause, Folder, ChevronRight, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useAudio } from '@/context/AudioContext';
 
 export function RecordList({ records }: { records: Record[] }) {
   const router = useRouter();
-  const [playingId, setPlayingId] = useState<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { currentRecord, isPlaying, playRecord, togglePlay } = useAudio();
 
   // Grouping state
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -54,21 +54,10 @@ export function RecordList({ records }: { records: Record[] }) {
     router.refresh();
   };
 
-  const togglePlay = (record: Record) => {
-    if (playingId === record.id) {
-      audioRef.current?.pause();
-      setPlayingId(null);
-    } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      const audio = new Audio(`/api/records/${record.filename}`);
-      audio.onended = () => setPlayingId(null);
-      audio.play();
-      audioRef.current = audio;
-      setPlayingId(record.id);
-    }
+  const isThisPlaying = (record: Record) => {
+    return currentRecord?.id === record.id && isPlaying;
   };
+
 
   if (records.length === 0) {
     return <div className="text-slate-500 text-sm">録音ファイルは見つかりませんでした。</div>;
@@ -99,46 +88,48 @@ export function RecordList({ records }: { records: Record[] }) {
           {expandedGroups.has(group.title) && (
             <div className="divide-y divide-slate-800/50 border-t border-slate-800">
               {group.items.map((record) => (
-                <div key={record.id} className="p-4 flex justify-between items-center hover:bg-slate-800/50 transition-colors pl-6">
-                  <div className="flex items-center space-x-4">
+                <div key={record.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-800/50 transition-colors pl-6">
+                  <div className="flex items-start sm:items-center space-x-4 w-full">
                     <button
-                      onClick={() => togglePlay(record)}
-                      className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all border border-slate-700 hover:border-blue-500"
+                      onClick={() => playRecord(record)}
+                      className="w-10 h-10 sm:w-8 sm:h-8 shrink-0 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all border border-slate-700 hover:border-blue-500"
                     >
-                      {playingId === record.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+                      {isThisPlaying(record) ? <Pause className="w-5 h-5 sm:w-4 sm:h-4" /> : <Play className="w-5 h-5 sm:w-4 sm:h-4 ml-0.5" />}
                     </button>
-                    <div>
-                      <div className="text-sm font-medium text-slate-300 truncate max-w-[200px] md:max-w-md">
-                        {/* Show filename or date if filename is redundant because of folder title? 
-                                                Actually filename usually contains date. 
-                                                Let's show simplified info.
-                                            */}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-slate-300 break-words line-clamp-2 md:line-clamp-1">
                         {record.filename}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {record.station_id} • {new Date(record.created_at).toLocaleString('ja-JP')} • {
+                      <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                        <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] uppercase">{record.station_id}</span>
+                        <span>{new Date(record.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="hidden sm:inline opacity-30">•</span>
+                        <span>{
                           record.size < 1024 * 1024
                             ? `${Math.round(record.size / 1024)} KB`
                             : `${(record.size / 1024 / 1024).toFixed(1)} MB`
-                        }
+                        }</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-2 w-full sm:w-auto justify-end border-t border-slate-800/50 sm:border-0 pt-2 sm:pt-0">
                     <a
                       href={`/api/records/${record.filename}?download=true`}
                       download
-                      className="p-2 text-slate-600 hover:text-blue-400 hover:bg-blue-950/30 rounded-lg transition-colors"
+                      className="flex-1 sm:flex-none p-3 sm:p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-950/30 rounded-lg transition-colors flex items-center justify-center border border-slate-800 sm:border-0"
                       title="ダウンロード"
                     >
-                      <Download className="w-4 h-4" />
+                      <Download className="w-5 h-5 sm:w-4 sm:h-4" />
+                      <span className="sm:hidden ml-2 text-sm">保存</span>
                     </a>
                     <button
                       onClick={() => handleDelete(record.filename)}
-                      className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors"
+                      className="flex-1 sm:flex-none p-3 sm:p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors flex items-center justify-center border border-slate-800 sm:border-0"
                       title="削除"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
+                      <span className="sm:hidden ml-2 text-sm">削除</span>
                     </button>
                   </div>
                 </div>

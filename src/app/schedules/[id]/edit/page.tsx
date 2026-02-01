@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { DatePicker } from '@/components/DatePicker';
-import { format, parseISO } from 'date-fns';
 
 interface Station {
     id: string;
@@ -66,7 +65,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
             } else {
                 // One-time: "YYYY-MM-DDTHH:mm"
                 try {
-                    const dateObj = parseISO(scheduleData.start_time);
+                    const dateObj = new Date(scheduleData.start_time);
                     setDate(dateObj);
 
                     const hh = String(dateObj.getHours()).padStart(2, '0');
@@ -92,7 +91,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         e.preventDefault();
         setIsLoading(true);
 
-        const dateStr = date ? format(date, 'yyyy-MM-dd') : '';
+        const dateStr = date ? date.toLocaleDateString('sv-SE') : '';
         let startTimePayload = `${dateStr}T${time}`;
         if (isWeekly) {
             startTimePayload = time;
@@ -202,13 +201,13 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     {isWeekly ? (
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-300">曜日</label>
-                            <div className="flex space-x-2">
+                            <div className="flex flex-wrap gap-2">
                                 {daysOfWeek.map((d) => (
                                     <button
                                         key={d.id}
                                         type="button"
                                         onClick={() => toggleDay(d.id)}
-                                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${selectedDays.includes(d.id)
+                                        className={`w-11 h-11 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${selectedDays.includes(d.id)
                                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 scale-105'
                                             : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
                                             }`}
@@ -243,22 +242,22 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     {/* 録音時間 */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-300">録音時間 (分)</label>
-                        <div className="flex items-center space-x-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                             <input
                                 type="number"
                                 min="1"
                                 required
                                 value={duration}
                                 onChange={(e) => setDuration(e.target.value)}
-                                className="w-32 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full sm:w-32 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                            <div className="flex space-x-2">
+                            <div className="flex flex-wrap gap-2">
                                 {[30, 60, 120].map(min => (
                                     <button
                                         key={min}
                                         type="button"
                                         onClick={() => setDuration(String(min))}
-                                        className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-sm text-slate-300 transition-colors"
+                                        className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors border border-slate-700"
                                     >
                                         {min}分
                                     </button>
@@ -267,11 +266,11 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-800 flex justify-end">
+                    <div className="pt-4 border-t border-slate-800">
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3.5 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/40 hover:scale-[1.02] active:scale-[0.98]"
                         >
                             <Save className="w-5 h-5" />
                             <span>{isLoading ? '保存中...' : '変更を保存'}</span>

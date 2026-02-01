@@ -47,13 +47,16 @@ export async function recordRadiko(stationId: string, durationMin: number, title
         console.log(`[REC ${stationId}] Executing: ${REC_SCRIPT} ${args.join(' ')}`);
 
         const child = spawn(REC_SCRIPT, args);
+        let errorOutput = '';
 
         child.stdout.on('data', (data) => {
             console.log(`[REC ${stationId} STDOUT] ${data}`);
         });
 
         child.stderr.on('data', (data) => {
-            console.error(`[REC ${stationId} STDERR] ${data}`);
+            const str = data.toString();
+            console.error(`[REC ${stationId} STDERR] ${str}`);
+            errorOutput += str;
         });
 
         child.on('close', (code) => {
@@ -72,15 +75,19 @@ export async function recordRadiko(stationId: string, durationMin: number, title
           `);
                     stmt.run(filename, stationId, title || null, now.toISOString(), durationMin, `/records/${filename}`, size);
 
-                    resolve({ success: true, filename });
+                    resolve({ success: true, filename, size });
+
                 } catch (dbError) {
                     console.error('Failed to save record to DB:', dbError);
                     resolve({ success: true, filename, error: 'DB Insert Failed' });
                 }
             } else {
                 console.error(`Recording failed with code ${code}`);
-                reject(new Error(`Recording failed with code ${code}`));
+                // 最後の数行程度をエラーメッセージとして採用
+                const summary = errorOutput.split('\n').filter(l => l.trim()).slice(-3).join('\n') || `Exit code ${code}`;
+                reject(new Error(summary));
             }
         });
     });
 }
+

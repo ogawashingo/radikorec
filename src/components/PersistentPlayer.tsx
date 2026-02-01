@@ -1,0 +1,142 @@
+'use client';
+
+import { useAudio } from '@/context/AudioContext';
+import { Play, Pause, RotateCcw, RotateCw, X, FastForward } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { twMerge } from 'tailwind-merge';
+
+export function PersistentPlayer() {
+    const {
+        currentRecord,
+        isPlaying,
+        togglePlay,
+        currentTime,
+        duration,
+        seek,
+        skip,
+        playbackRate,
+        setRate
+    } = useAudio();
+
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        if (currentRecord) {
+            setIsVisible(true);
+        }
+    }, [currentRecord]);
+
+    if (!currentRecord || !isVisible) return null;
+
+    const formatTime = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) {
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const rates = [1, 1.25, 1.5, 2];
+
+    return (
+        <div className="fixed bottom-0 left-0 right-0 z-[60] p-4 lg:pl-64">
+            <div className="max-w-4xl mx-auto bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
+                {/* Progress Bar */}
+                <div
+                    className="h-1.5 bg-slate-800 cursor-pointer group relative"
+                    onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const percentage = x / rect.width;
+                        seek(percentage * duration);
+                    }}
+                >
+                    <div
+                        className="h-full bg-blue-500 transition-all duration-100 relative"
+                        style={{ width: `${(currentTime / duration) * 100}%` }}
+                    >
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg scale-0 group-hover:scale-100 transition-transform" />
+                    </div>
+                </div>
+
+                <div className="p-4 flex items-center justify-between gap-4">
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-slate-100 truncate">
+                            {currentRecord.title || currentRecord.filename}
+                        </h4>
+                        <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-0.5">
+                            <span className="bg-slate-800 px-1.5 py-0.5 rounded uppercase">{currentRecord.station_id}</span>
+                            <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+                        </div>
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex items-center space-x-2 sm:space-x-4">
+                        <button
+                            onClick={() => skip(-15)}
+                            className="p-2 text-slate-400 hover:text-white transition-colors"
+                            title="15秒戻す"
+                        >
+                            <RotateCcw className="w-5 h-5" />
+                        </button>
+
+                        <button
+                            onClick={togglePlay}
+                            className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-900/40 transition-all hover:scale-105 active:scale-95"
+                        >
+                            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
+                        </button>
+
+                        <button
+                            onClick={() => skip(30)}
+                            className="p-2 text-slate-400 hover:text-white transition-colors"
+                            title="30秒送る"
+                        >
+                            <RotateCw className="w-5 h-5" />
+                        </button>
+
+                        <div className="hidden sm:flex items-center bg-slate-800 rounded-lg p-1 space-x-1">
+                            {rates.map(rate => (
+                                <button
+                                    key={rate}
+                                    onClick={() => setRate(rate)}
+                                    className={twMerge(
+                                        "text-[10px] font-bold px-2 py-1 rounded transition-all",
+                                        playbackRate === rate
+                                            ? "bg-blue-600 text-white"
+                                            : "text-slate-500 hover:text-slate-300"
+                                    )}
+                                >
+                                    {rate}x
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Mobile Speed Toggle */}
+                        <button
+                            onClick={() => {
+                                const currentIndex = rates.indexOf(playbackRate);
+                                const nextIndex = (currentIndex + 1) % rates.length;
+                                setRate(rates[nextIndex]);
+                            }}
+                            className="sm:hidden p-2 text-slate-400 hover:text-white transition-colors flex flex-col items-center"
+                        >
+                            <FastForward className="w-5 h-5" />
+                            <span className="text-[8px] font-bold">{playbackRate}x</span>
+                        </button>
+
+                        <button
+                            onClick={() => setIsVisible(false)}
+                            className="p-2 text-slate-500 hover:text-red-400 transition-colors ml-2"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
