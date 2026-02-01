@@ -41,15 +41,15 @@ cd radikorec
 ```
 
 
-※ まだリポジトリがない場合は、ローカルからファイルを転送してください（方法B）。
+※ まだリポジトリがない場合は、手元の環境からファイルを転送してください（方法B）。
 
 ### 方法B: ファイル転送 (rsync/scp)
 
-ローカルマシン (Mac) からデプロイ先へファイルをコピーします。
-(`node_modules`, `.next`, `.git` は除外して転送し、Pi上でインストール・ビルドするのが安全です)
+手元のマシンからデプロイ先へファイルをコピーします。
+(`node_modules`, `.next`, `.git` は除外して転送し、デプロイ先でインストール・ビルドするのが安全です)
 
 ```bash
-# ローカルマシンで実行
+# 手元のマシンで実行
 rsync -avz --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '*.db' --exclude '*.sqlite' ./ <USER>@<IP_ADDRESS>:~/radikorec
 ```
 
@@ -85,7 +85,7 @@ nano .env
 
 `.env` ファイルの内容:
 ```env
-RADIKO_MAIL="your@email.com"
+RADIKO_MAIL="user@example.com"
 RADIKO_PASSWORD="your_password"
 ```
 
@@ -98,7 +98,7 @@ npm start
 動作確認などで一時的に利用する場合:
 
 ```bash
-RADIKO_MAIL="your@email.com" RADIKO_PASSWORD="pass" npm start
+RADIKO_MAIL="user@example.com" RADIKO_PASSWORD="pass" npm start
 ```
 
 ## 5. 常時実行設定 (PM2)
@@ -111,7 +111,7 @@ sudo npm install -g pm2
 
 # アプリケーションの登録
 # 環境変数を設定する場合は --env オプションまたは ecosystem.config.js を使用
-RADIKO_MAIL="your@email.com" RADIKO_PASSWORD="pass" pm2 start npm --name "radikorec" -- start
+RADIKO_MAIL="user@example.com" RADIKO_PASSWORD="pass" pm2 start npm --name "radikorec" -- start
 
 # 設定の保存 (再起動後も有効にする)
 pm2 save
