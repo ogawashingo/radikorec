@@ -17,7 +17,7 @@ export function RecordList({ records }: { records: Record[] }) {
     setOptimisticRecords(records);
   }, [records]);
 
-  // Grouping state
+  // グループ化の状態
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [deleteFilename, setDeleteFilename] = useState<string | null>(null);
 
@@ -43,7 +43,7 @@ export function RecordList({ records }: { records: Record[] }) {
       groups[key].push(record);
     });
 
-    // Sort keys: specified titles first, then "Others"
+    // ソートキー: 指定されたタイトルを最初に、次に"その他"
     const sortedKeys = Object.keys(groups).sort((a, b) => {
       if (a === noTitleKey) return 1;
       if (b === noTitleKey) return -1;
@@ -59,7 +59,7 @@ export function RecordList({ records }: { records: Record[] }) {
   const executeDelete = async () => {
     if (!deleteFilename) return;
 
-    // Optimistic
+    // 楽観的更新
     const previous = optimisticRecords;
     setOptimisticRecords(prev => prev.filter(r => r.filename !== deleteFilename));
     setDeleteFilename(null);
@@ -130,7 +130,10 @@ export function RecordList({ records }: { records: Record[] }) {
                       </div>
                       <div className="text-[10px] text-slate-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 font-bold">
                         <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase border border-slate-200">{record.station_id}</span>
-                        <span className="mt-0.5 font-medium">{new Date(record.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="mt-0.5 font-medium">{(() => {
+                          const d = new Date(record.created_at);
+                          return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                        })()}</span>
                         <span className="hidden sm:inline opacity-30 mt-0.5">•</span>
                         <span className="mt-0.5 font-medium">{
                           record.size < 1024 * 1024

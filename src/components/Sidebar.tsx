@@ -1,15 +1,16 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Radio, Calendar, FileAudio, Settings, Home } from 'lucide-react';
+import { Radio, Calendar, FileAudio, Settings, Home, Search } from 'lucide-react';
 import { clsx } from 'clsx'; // Make sure clsx is installed or use template literal
-// If clsx not installed, simple template literal is fine. I installed it.
+// clsxがインストールされていない場合は、シンプルなテンプレートリテラルで問題ありません。インストール済みです。
 import { twMerge } from 'tailwind-merge';
 
 const navItems = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Schedules', href: '/schedules', icon: Calendar },
     { name: 'Recordings', href: '/records', icon: FileAudio },
+    { name: 'Keywords', href: '/keywords', icon: Search },
     // { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

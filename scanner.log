@@ -1,0 +1,120 @@
+[2026-02-02T10:47:21.296Z] Starting keyword scan...
+[2026-02-02T10:47:21.296Z] Searching for keyword: News
+[2026-02-02T10:47:53.135Z] Starting keyword scan...
+[2026-02-02T10:47:53.135Z] Searching for keyword: News
+[2026-02-02T10:47:55.158Z] Error processing keyword News: Error: Auth2 failed
+[2026-02-02T10:48:37.556Z] Starting keyword scan...
+[2026-02-02T10:48:37.557Z] Searching for keyword: News
+[2026-02-02T10:48:40.396Z] Error processing keyword News: Error: Auth2 failed: 405 {"message":"Method Not Allowed"}
+
+[2026-02-02T10:49:11.798Z] Starting keyword scan...
+[2026-02-02T10:49:11.798Z] Searching for keyword: News
+[2026-02-02T10:49:14.499Z] Error processing keyword News: Error: Search failed: 415
+[2026-02-02T10:50:07.023Z] Starting keyword scan...
+[2026-02-02T10:50:07.023Z] Searching for keyword: News
+[2026-02-02T10:50:09.604Z] Error processing keyword News: Error: Search failed: 415
+[2026-02-02T10:51:27.882Z] Starting keyword scan...
+[2026-02-02T10:51:27.887Z] Searching for keyword: News
+[2026-02-02T10:51:29.338Z] Found 10 programs from API.
+[2026-02-02T10:51:29.338Z] Future programs: 6
+[2026-02-02T10:51:29.338Z] Processing: ニュース at 2026-02-02 20:00:00
+[2026-02-02T10:51:29.338Z] Error processing keyword News: SqliteError: no such column: "%s" - should this be a string literal in single-quotes?
+[2026-02-02T10:52:19.983Z] Starting keyword scan...
+[2026-02-02T10:52:19.983Z] Searching for keyword: News
+[2026-02-02T10:52:21.759Z] Found 10 programs from API.
+[2026-02-02T10:52:21.760Z] Future programs: 6
+[2026-02-02T10:52:21.760Z] Processing: ニュース at 2026-02-02 20:00:00
+[2026-02-02T10:52:21.762Z] Processing: 競馬が好きだ！ at 2026-02-02 20:50:00
+[2026-02-02T10:52:21.763Z] Processing: ダイバーシティニュース[社会] at 2026-02-02 21:00:00
+[2026-02-02T10:52:21.764Z] Processing: TOKYO FM NEWS at 2026-02-02 21:55:00
+[2026-02-02T10:52:21.765Z] Processing: LuckyFMニュース・天気予報 at 2026-02-02 21:55:00
+[2026-02-02T10:52:21.766Z] Processing: ニュース・海上気象情報・交通情報（関東甲信越） at 2026-02-02 21:55:00
+[2026-02-02T11:05:02.893Z] Starting keyword scan...
+[2026-02-02T11:05:02.894Z] Searching for keyword: ニュース
+[2026-02-02T11:05:05.962Z] Found 10 programs from API.
+[2026-02-02T11:05:05.963Z] Future programs: 9
+[2026-02-02T11:05:05.963Z] Processing: 競馬が好きだ！ at 2026-02-02 20:50:00
+[2026-02-02T11:05:05.964Z] Processing: ダイバーシティニュース[社会] at 2026-02-02 21:00:00
+[2026-02-02T11:05:05.964Z] Processing: TOKYO FM NEWS at 2026-02-02 21:55:00
+[2026-02-02T11:05:05.965Z] Processing: LuckyFMニュース・天気予報 at 2026-02-02 21:55:00
+[2026-02-02T11:05:05.966Z] Processing: ニュース・海上気象情報・交通情報（関東甲信越） at 2026-02-02 21:55:00
+[2026-02-02T11:05:05.966Z] Processing: 三浦大知のSpacewalk at 2026-02-02 22:00:00
+[2026-02-02T11:05:05.967Z] Processing: ニュース・気象情報（関東甲信越） at 2026-02-02 22:55:00
+[2026-02-02T11:05:05.967Z] Processing: ニュース at 2026-02-02 23:00:00
+[2026-02-02T11:05:05.968Z] Processing: TOKYO FM NEWS at 2026-02-02 23:55:00
+[2026-02-02T14:09:48.794Z] Starting keyword scan...
+[2026-02-02T14:09:48.794Z] Searching for keyword: Anime
+[2026-02-02T14:09:51.384Z] Found 10 programs from API.
+[2026-02-02T14:09:51.385Z] Future programs: 9
+[2026-02-02T14:09:51.385Z] Processing: あつまれ！アキバユニバース at 2026-02-03 00:30:00
+[2026-02-02T14:09:51.388Z] Processing: 東山奈央のラジオ＠リビング at 2026-02-03 03:30:00
+[2026-02-02T14:09:51.390Z] Processing: GRAND MARQUEE at 2026-02-03 16:30:00
+[2026-02-02T14:09:51.393Z] Processing: Anime & Seiyu Music Night at 2026-02-03 20:00:00
+[2026-02-02T14:09:51.394Z] Processing: シアーミュージック presents しらスタのボイトレディオ at 2026-02-03 21:00:00
+[2026-02-02T14:09:51.396Z] Processing: 伊織もえの電脳らじお at 2026-02-03 22:00:00
+[2026-02-02T14:09:51.397Z] Processing: トゲナシトゲアリのトゲラジ～川崎から世界へ～ at 2026-02-03 23:30:00
+[2026-02-02T14:09:51.399Z] Processing: THE KINGS PLACE at 2026-02-04 01:00:00
+[2026-02-02T14:09:51.400Z] Processing: TRUE MUSIC CAMP RADIO at 2026-02-04 01:30:00
+[2026-02-02T14:09:51.401Z] Searching for keyword: 宮野真守
+[2026-02-02T14:09:53.254Z] Found 1 programs from API.
+[2026-02-02T14:09:53.254Z] Future programs: 1
+[2026-02-02T14:09:53.254Z] Processing: 山田裕貴のオールナイトニッポン at 2026-02-03 01:00:00
+[2026-02-02T14:09:53.255Z] Searching for keyword: 堀江由衣
+[2026-02-02T14:09:56.276Z] Found 1 programs from API.
+[2026-02-02T14:09:56.276Z] Future programs: 1
+[2026-02-02T14:09:56.276Z] Processing: 堀江由衣の天使のたまご at 2026-02-07 01:00:00
+[2026-02-02T14:09:56.277Z] Searching for keyword: 灯台
+[2026-02-02T14:09:58.705Z] Found 1 programs from API.
+[2026-02-02T14:09:58.705Z] Future programs: 1
+[2026-02-02T14:09:58.705Z] Processing: 燈の守り人 presents 灯台ラジオ at 2026-02-08 03:00:00
+[2026-02-02T14:16:56.391Z] Starting keyword scan...
+[2026-02-02T14:16:56.391Z] Searching for keyword: Anime
+[2026-02-02T14:16:58.616Z] Found 10 programs from API.
+[2026-02-02T14:16:58.616Z] Future programs: 9
+[2026-02-02T14:16:58.617Z] Processing: あつまれ！アキバユニバース at 2026-02-03 00:30:00
+[2026-02-02T14:16:58.617Z] Processing: 東山奈央のラジオ＠リビング at 2026-02-03 03:30:00
+[2026-02-02T14:16:58.617Z] Processing: GRAND MARQUEE at 2026-02-03 16:30:00
+[2026-02-02T14:16:58.617Z] Processing: Anime & Seiyu Music Night at 2026-02-03 20:00:00
+[2026-02-02T14:16:58.617Z] Processing: シアーミュージック presents しらスタのボイトレディオ at 2026-02-03 21:00:00
+[2026-02-02T14:16:58.618Z] Processing: 伊織もえの電脳らじお at 2026-02-03 22:00:00
+[2026-02-02T14:16:58.618Z] Processing: トゲナシトゲアリのトゲラジ～川崎から世界へ～ at 2026-02-03 23:30:00
+[2026-02-02T14:16:58.618Z] Processing: THE KINGS PLACE at 2026-02-04 01:00:00
+[2026-02-02T14:16:58.618Z] Processing: TRUE MUSIC CAMP RADIO at 2026-02-04 01:30:00
+[2026-02-02T14:16:58.618Z] Searching for keyword: 宮野真守
+[2026-02-02T14:17:00.678Z] Found 1 programs from API.
+[2026-02-02T14:17:00.678Z] Future programs: 1
+[2026-02-02T14:17:00.678Z] Processing: 山田裕貴のオールナイトニッポン at 2026-02-03 01:00:00
+[2026-02-02T14:17:00.678Z] Searching for keyword: 堀江由衣
+[2026-02-02T14:17:02.002Z] Found 1 programs from API.
+[2026-02-02T14:17:02.003Z] Future programs: 1
+[2026-02-02T14:17:02.003Z] Processing: 堀江由衣の天使のたまご at 2026-02-07 01:00:00
+[2026-02-02T14:17:02.003Z] Searching for keyword: 灯台
+[2026-02-02T14:17:03.413Z] Found 1 programs from API.
+[2026-02-02T14:17:03.413Z] Future programs: 1
+[2026-02-02T14:17:03.414Z] Processing: 燈の守り人 presents 灯台ラジオ at 2026-02-08 03:00:00
+[2026-02-02T14:17:45.469Z] Starting keyword scan...
+[2026-02-02T14:17:45.470Z] Searching for keyword: 宮野真守
+[2026-02-02T14:17:47.265Z] Found 1 programs from API.
+[2026-02-02T14:17:47.265Z] Future programs: 1
+[2026-02-02T14:17:47.265Z] Processing: 山田裕貴のオールナイトニッポン at 2026-02-03 01:00:00
+[2026-02-02T14:17:47.265Z] Searching for keyword: 堀江由衣
+[2026-02-02T14:17:48.959Z] Found 1 programs from API.
+[2026-02-02T14:17:48.960Z] Future programs: 1
+[2026-02-02T14:17:48.960Z] Processing: 堀江由衣の天使のたまご at 2026-02-07 01:00:00
+[2026-02-02T14:17:48.960Z] Searching for keyword: 灯台
+[2026-02-02T14:17:50.816Z] Found 1 programs from API.
+[2026-02-02T14:17:50.817Z] Future programs: 1
+[2026-02-02T14:17:50.817Z] Processing: 燈の守り人 presents 灯台ラジオ at 2026-02-08 03:00:00
+[2026-02-02T14:19:17.656Z] Starting keyword scan...
+[2026-02-02T14:19:17.656Z] Searching for keyword: 宮野真守
+[2026-02-02T14:19:19.978Z] Found 1 programs from API.
+[2026-02-02T14:19:19.978Z] Future programs: 1
+[2026-02-02T14:19:19.978Z] Processing: 山田裕貴のオールナイトニッポン at 2026-02-03 01:00:00
+[2026-02-02T14:19:19.979Z] Searching for keyword: 堀江由衣
+[2026-02-02T14:19:22.247Z] Found 1 programs from API.
+[2026-02-02T14:19:22.247Z] Future programs: 1
+[2026-02-02T14:19:22.247Z] Processing: 堀江由衣の天使のたまご at 2026-02-07 01:00:00
+[2026-02-02T14:19:22.247Z] Searching for keyword: 灯台
+[2026-02-02T14:19:23.827Z] Found 1 programs from API.
+[2026-02-02T14:19:23.828Z] Future programs: 1
+[2026-02-02T14:19:23.828Z] Processing: 燈の守り人 presents 灯台ラジオ at 2026-02-08 03:00:00

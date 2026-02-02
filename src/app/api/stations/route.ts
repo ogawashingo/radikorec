@@ -8,8 +8,8 @@ export async function GET() {
     try {
         const { stdout } = await execAsync('./rec_radiko_ts.sh -l');
 
-        // Output format check: 'ID:Name:Number' (e.g. 'TBS:TBSラジオ:90')
-        // Split by newline, then by ':'
+        // 出力フォーマットチェック: 'ID:Name:Number' (例: 'TBS:TBSラジオ:90')
+        // 改行で分割し、次に':'で分割
         const stations = stdout
             .trim()
             .split('\n')
@@ -33,7 +33,7 @@ export async function GET() {
     } catch (error) {
         console.error('Failed to fetch stations list:', error);
 
-        // Fallback to static list if script fails or returns empty
+        // スクリプトが失敗したり空を返した場合は静的リストにフォールバック
         const FALLBACK_STATIONS = [
             { id: 'TBS', name: 'TBSラジオ' },
             { id: 'QRR', name: '文化放送' },

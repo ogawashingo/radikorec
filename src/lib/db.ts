@@ -34,9 +34,16 @@ export function initDB() {
       size INTEGER,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS keywords (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      keyword TEXT NOT NULL,
+      enabled INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
-  // Migration for existing tables
+  // 既存テーブルのマイグレーション
   try {
     db.exec("ALTER TABLE schedules ADD COLUMN status TEXT DEFAULT 'pending'");
   } catch (e) { /* ignore */ }

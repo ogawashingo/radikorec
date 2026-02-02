@@ -6,21 +6,21 @@ import fs from 'fs';
 const REC_SCRIPT = path.join(process.cwd(), 'rec_radiko_ts.sh');
 const OUTPUT_DIR = path.join(process.cwd(), 'public', 'records');
 
-// Ensure output dir exists
+// 出力ディレクトリが存在することを確認
 if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
 export async function recordRadiko(stationId: string, durationMin: number, title?: string, scheduleId?: number, startTime?: string) {
     return new Promise((resolve, reject) => {
-        // Determine filename
+        // ファイル名を決定
         const now = new Date();
         // format YYYYMMDDHHMMSS
         const timestamp = now.toISOString().replace(/[-:T]/g, '').split('.')[0];
 
         let safeTitle = stationId;
         if (title) {
-            // Remove unsafe chars, space to underscore
+            // 安全でない文字を削除、スペースをアンダースコアに変換
             safeTitle = title.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_');
         }
 
@@ -63,11 +63,11 @@ export async function recordRadiko(stationId: string, durationMin: number, title
             if (code === 0) {
                 console.log(`Recording finished: ${filename}`);
 
-                // Get file size
+                // ファイルサイズを取得
                 const stats = fs.statSync(outputPath);
                 const size = stats.size;
 
-                // Insert into records DB
+                // records DBに挿入
                 try {
                     const stmt = db.prepare(`
             INSERT INTO records (filename, station_id, title, start_time, duration, file_path, size)

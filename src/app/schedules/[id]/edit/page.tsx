@@ -27,7 +27,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
     const [isLoading, setIsLoading] = useState(false);
     const [isFetching, setIsFetching] = useState(true);
 
-    // Form states
+    // フォームの状態
     const [stationId, setStationId] = useState('');
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('');
@@ -38,7 +38,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
     const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // Weekly states
+    // 毎週予約の状態
     const [isWeekly, setIsWeekly] = useState(false);
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
@@ -52,7 +52,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         { id: 6, label: '土' },
     ];
 
-    // Initialize data
+    // データを初期化
     useEffect(() => {
         Promise.all([
             fetch('/api/stations').then(res => res.json()),
@@ -63,14 +63,24 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         ]).then(([stationsData, scheduleData]) => {
             setStations(stationsData);
 
-            // Populate form
+            // フォームにデータを設定
             setStationId(scheduleData.station_id);
             setDuration(String(scheduleData.duration));
             setTitle(scheduleData.title || '');
 
             if (scheduleData.recurring_pattern === 'weekly') {
                 setIsWeekly(true);
-                setTime(scheduleData.start_time); // "HH:mm"
+                // ISO文字列 (YYYY-MM-DDTHH:mm) から HH:mm を抽出、または既にHH:mm形式ならそのまま使用
+                const sTime = scheduleData.start_time;
+                if (sTime.includes('T')) {
+                    const dateObj = new Date(sTime);
+                    const hh = String(dateObj.getHours()).padStart(2, '0');
+                    const mm = String(dateObj.getMinutes()).padStart(2, '0');
+                    setTime(`${hh}:${mm}`);
+                } else {
+                    setTime(sTime);
+                }
+
                 if (scheduleData.day_of_week !== null) {
                     setSelectedDays([scheduleData.day_of_week]);
                 }
@@ -189,7 +199,11 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
     };
 
     const toggleDay = (dayId: number) => {
-        setSelectedDays([dayId]);
+        if (selectedDays.includes(dayId)) {
+            setSelectedDays(selectedDays.filter(id => id !== dayId));
+        } else {
+            setSelectedDays([...selectedDays, dayId]);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -224,25 +238,74 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         }
 
         try {
-            const payload: any = {
+            // 1. 既存の予約を更新 (メインの曜日)
+            const primaryDay = isWeekly ? selectedDays[0] : null;
+
+            // メインの曜日の開始時間を計算
+            let primaryStartTime: string;
+            if (isWeekly) {
+                const today = new Date();
+                const targetDay = primaryDay!;
+                const daysUntil = (targetDay - today.getDay() + 7) % 7 || 7;
+                const nextOccurrence = new Date(today);
+                nextOccurrence.setDate(today.getDate() + daysUntil);
+                const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
+                primaryStartTime = `${dateStr}T${time}`;
+            } else {
+                const dateStr = date!.toLocaleDateString('sv-SE');
+                primaryStartTime = `${dateStr}T${time}`;
+            }
+
+            const primaryPayload = {
                 station_id: stationId,
-                start_time: startTimePayload,
+                start_time: primaryStartTime,
                 duration: parseInt(duration, 10),
                 title: title || undefined,
                 recurring_pattern: isWeekly ? 'weekly' : null,
-                day_of_week: isWeekly ? selectedDays[0] : null,
+                day_of_week: isWeekly ? primaryDay : null,
             };
 
             const res = await fetch(`/api/schedules/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(primaryPayload),
             });
 
             if (!res.ok) throw new Error('更新に失敗しました');
 
+            // 2. 追加の曜日があれば、新規予約として作成
+            if (isWeekly && selectedDays.length > 1) {
+                const additionalDays = selectedDays.slice(1);
+                const additionalPayload = [];
+
+                const today = new Date();
+                for (const dayId of additionalDays) {
+                    const daysUntil = (dayId - today.getDay() + 7) % 7 || 7;
+                    const nextOccurrence = new Date(today);
+                    nextOccurrence.setDate(today.getDate() + daysUntil);
+                    const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
+                    const startTime = `${dateStr}T${time}`;
+
+                    additionalPayload.push({
+                        station_id: stationId,
+                        start_time: startTime,
+                        duration: parseInt(duration, 10),
+                        title: title || "無題の録音",
+                        recurring_pattern: 'weekly',
+                        day_of_week: dayId,
+                    });
+                }
+
+                if (additionalPayload.length > 0) {
+                    await fetch("/api/schedules", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(additionalPayload),
+                    });
+                }
+            }
+
             router.push('/schedules');
-            router.refresh();
         } catch (error) {
             alert('更新中にエラーが発生しました。');
             setIsLoading(false);

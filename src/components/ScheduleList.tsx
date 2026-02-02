@@ -18,7 +18,7 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
   const executeDelete = async () => {
     if (!deleteId) return;
 
-    // Optimistic update
+    // 楽観的更新
     const previousSchedules = optimisticSchedules;
     setOptimisticSchedules(prev => prev.filter(s => s.id !== deleteId));
     setDeleteId(null);
@@ -68,7 +68,10 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
                 {schedule.recurring_pattern === 'weekly' ? (
                   <span>{schedule.start_time}</span>
                 ) : (
-                  <span>{new Date(schedule.start_time).toLocaleString('ja-JP')}</span>
+                  <span>{(() => {
+                    const d = new Date(schedule.start_time);
+                    return `${d.getMonth() + 1}/${d.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][d.getDay()]}) ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                  })()}</span>
                 )}
               </div>
               <span className="opacity-30">•</span>

@@ -8,7 +8,7 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ date, setDate, className = '', required = false }: DatePickerProps) {
-    // Date object to YYYY-MM-DD string
+    // DateオブジェクトをYYYY-MM-DD文字列に変換
     const value = date ? date.toLocaleDateString('sv-SE') : ''; // sv-SE is YYYY-MM-DD
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

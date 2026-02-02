@@ -87,6 +87,7 @@ nano .env
 ```env
 RADIKO_MAIL="user@example.com"
 RADIKO_PASSWORD="your_password"
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
 ```
 
 保存後 (`Ctrl+O`, `Enter`, `Ctrl+X`)、通常通り起動します:
@@ -111,7 +112,7 @@ sudo npm install -g pm2
 
 # アプリケーションの登録
 # 環境変数を設定する場合は --env オプションまたは ecosystem.config.js を使用
-RADIKO_MAIL="user@example.com" RADIKO_PASSWORD="pass" pm2 start npm --name "radikorec" -- start
+RADIKO_MAIL="user@example.com" RADIKO_PASSWORD="pass" DISCORD_WEBHOOK_URL="..." pm2 start npm --name "radikorec" -- start
 
 # 設定の保存 (再起動後も有効にする)
 pm2 save

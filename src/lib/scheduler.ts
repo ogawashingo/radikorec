@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { db } from '@/lib/db';
 import { recordRadiko } from '@/lib/recorder';
 import { sendDiscordNotification, formatFileSize } from '@/lib/notifier';
+import { scanAndReserve } from '@/lib/scanner';
 
 // 開発中の重複初期化を防ぐためのグローバル参照
 let isSchedulerRunning = false;
@@ -26,6 +27,18 @@ export function initScheduler() {
 
     console.log('Starting Scheduler...');
     isSchedulerRunning = true;
+
+    // 毎日のキーワードスキャン (04:00 JST)
+    cron.schedule('0 4 * * *', async () => {
+        console.log('Running daily keyword scan...');
+        try {
+            await scanAndReserve();
+        } catch (e) {
+            console.error('Keyword scan failed:', e);
+        }
+    }, {
+        timezone: "Asia/Tokyo"
+    });
 
     // 1分ごとに実行
     cron.schedule('* * * * *', async () => {
@@ -98,7 +111,7 @@ export function initScheduler() {
                         db.prepare("UPDATE schedules SET status = 'completed' WHERE id = ?").run(s.id);
                     }
 
-                    // Send Discord notification
+                    // Discord通知を送信
                     sendDiscordNotification(`✅ 録音完了: ${s.title || s.station_id}`, {
                         title: s.title || '無題の番組',
                         color: 0x00ff00, // Green
@@ -118,7 +131,7 @@ export function initScheduler() {
                             .run(errorMsg, s.id);
                     }
 
-                    // Send Discord notification
+                    // Discord通知を送信
                     sendDiscordNotification(`❌ 録音失敗: ${s.title || s.station_id}`, {
                         title: s.title || '無題の番組',
                         color: 0xff0000, // Red

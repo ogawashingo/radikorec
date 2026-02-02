@@ -44,7 +44,7 @@ export default function NewSchedulePage() {
     const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // Fetch stations on mount
+    // マウント時に放送局を取得
     useEffect(() => {
         fetch("/api/stations")
             .then(res => res.json())
@@ -56,37 +56,37 @@ export default function NewSchedulePage() {
             .catch(err => console.error("Failed to fetch stations:", err));
     }, []);
 
-    // Fetch programs when station or date changes
+    // 放送局または日付が変更されたときに番組を取得
     useEffect(() => {
         if (!stationId) {
             setAvailablePrograms([]);
             return;
         }
 
-        // For weekly schedules, use the selected day of week to find the next occurrence
-        // For one-time schedules, use the selected date
+        // 毎週予約の場合、選択された曜日を使用して次の発生日を見つける
+        // 単発予約の場合、選択された日付を使用
         let referenceDate: Date | undefined;
 
         if (isWeekly) {
-            // If at least one day is selected, use the first selected day
+            // 少なくとも1つの曜日が選択されている場合、最初の選択された曜日を使用
             if (selectedDays.length > 0) {
                 const today = new Date();
                 const todayDayOfWeek = today.getDay();
                 const targetDayOfWeek = selectedDays[0];
 
-                // Calculate days until the target day
+                // ターゲット曜日までの日数を計算
                 let daysUntil = targetDayOfWeek - todayDayOfWeek;
                 if (daysUntil < 0) {
                     daysUntil += 7; // Next week
                 } else if (daysUntil === 0) {
-                    // If today is the target day, use today
+                    // 今日がターゲット曜日の場合、今日を使用
                     daysUntil = 0;
                 }
 
                 referenceDate = new Date(today);
                 referenceDate.setDate(today.getDate() + daysUntil);
             } else {
-                // No day selected yet, use today as fallback
+                // まだ曜日が選択されていない場合、フォールバックとして今日を使用
                 referenceDate = new Date();
             }
         } else {
@@ -109,7 +109,7 @@ export default function NewSchedulePage() {
             .catch(err => console.error('Failed to fetch programs:', err));
     }, [stationId, date, isWeekly, selectedDays]);
 
-    // Filter programs based on title input
+    // タイトル入力に基づいて番組をフィルタリング
     useEffect(() => {
         if (!title.trim() || availablePrograms.length === 0) {
             setFilteredPrograms([]);
@@ -129,18 +129,43 @@ export default function NewSchedulePage() {
         setTime(p.time);
         setDuration(String(p.duration));
 
-        // If the program starts on the next calendar day (late night broadcast)
-        const progDateStr = p.start.substring(0, 8);
-        if (date) {
+        const progDateStr = p.start.substring(0, 8); // YYYYMMDD
+
+        if (isWeekly && selectedDays.length > 0) {
+            // 毎週予約の場合、番組が「明日」（深夜番組）かどうかをチェック
+            // 現在選択されている曜日に対して、期待される日付を再計算して比較する必要がある
+            const today = new Date();
+            const todayDayOfWeek = today.getDay();
+            const targetDayOfWeek = selectedDays[0];
+            let daysUntil = targetDayOfWeek - todayDayOfWeek;
+            if (daysUntil < 0) daysUntil += 7;
+
+            // 番組の放送日が、ターゲット曜日と異なるかチェック
+            const pDate = new Date(
+                parseInt(progDateStr.substring(0, 4)),
+                parseInt(progDateStr.substring(4, 6)) - 1,
+                parseInt(progDateStr.substring(6, 8))
+            );
+            const pDay = pDate.getDay();
+
+            if (pDay !== targetDayOfWeek) {
+                // 番組の放送曜日が、選択中の曜日と異なる（例：金曜深夜25時 → 土曜未明）
+                setSelectedDays([pDay]);
+                alert(`※深夜等のため、登録曜日を「${daysOfWeek.find(d => d.id === pDay)?.label}」に変更しました。`);
+            }
+        }
+        else if (date) {
+            // 単発予約のロジック
             const currentDateStr = date.toLocaleDateString('sv-SE').replace(/-/g, '');
             if (progDateStr > currentDateStr && !isWeekly) {
-                // Parse the next day date
+                // 翌日の日付としてパースして設定
                 const nextDay = new Date(
                     parseInt(progDateStr.substring(0, 4)),
                     parseInt(progDateStr.substring(4, 6)) - 1,
                     parseInt(progDateStr.substring(6, 8))
                 );
                 setDate(nextDay);
+                alert(`※深夜等のため、日付を「${nextDay.toLocaleDateString()}」に変更しました。`);
             }
         }
         setShowSuggestions(false);
@@ -158,46 +183,60 @@ export default function NewSchedulePage() {
         e.preventDefault();
 
         if (!stationId || !time) {
+            alert(`必須項目が不足しています。\n放送局: ${stationId}, 時間: ${time}`);
             return;
         }
         if (!isWeekly && !date) {
+            alert('開始日が選択されていません。');
             return;
         }
         if (isWeekly && selectedDays.length === 0) {
+            alert('曜日が選択されていません。');
             return;
         }
 
-        // Format start_time for API
-        let startTime: string;
-        if (isWeekly) {
-            // For weekly schedules, use a placeholder date (e.g., next occurrence of the selected day)
-            // The scheduler will handle the actual scheduling based on day_of_week
-            const today = new Date();
-            const targetDay = selectedDays[0];
-            const daysUntil = (targetDay - today.getDay() + 7) % 7 || 7;
-            const nextOccurrence = new Date(today);
-            nextOccurrence.setDate(today.getDate() + daysUntil);
-            const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
-            startTime = `${dateStr}T${time}`;
-        } else {
-            // For one-time schedules, use the selected date
-            const dateStr = date?.toLocaleDateString('sv-SE');
-            startTime = `${dateStr}T${time}`;
-        }
+        // ペイロード配列を作成 (一括登録のサポート)
+        const payload = [];
 
-        const scheduleData = {
-            station_id: stationId,
-            start_time: startTime,
-            duration: parseInt(duration),
-            title: title || "無題の録音",
-            recurring_pattern: isWeekly ? 'weekly' : null,
-            day_of_week: isWeekly ? selectedDays[0] : null,
-        };
+        if (isWeekly) {
+            const today = new Date();
+            for (const dayId of selectedDays) {
+                // この曜日(dayId)の次の発生日を計算
+                // (dayId - today.getDay() + 7) % 7 || 7  => 今日の場合は、来週（7日後）に設定される
+                const daysUntil = (dayId - today.getDay() + 7) % 7 || 7;
+                const nextOccurrence = new Date(today);
+                nextOccurrence.setDate(today.getDate() + daysUntil);
+                const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
+                const startTime = `${dateStr}T${time}`;
+
+                payload.push({
+                    station_id: stationId,
+                    start_time: startTime,
+                    duration: parseInt(duration),
+                    title: title || "無題の録音",
+                    recurring_pattern: 'weekly',
+                    day_of_week: dayId,
+                });
+            }
+        } else {
+            // 単発予約
+            const dateStr = date?.toLocaleDateString('sv-SE');
+            const startTime = `${dateStr}T${time}`;
+
+            payload.push({
+                station_id: stationId,
+                start_time: startTime,
+                duration: parseInt(duration),
+                title: title || "無題の録音",
+                recurring_pattern: null,
+                day_of_week: null,
+            });
+        }
 
         const res = await fetch("/api/schedules", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(scheduleData),
+            body: JSON.stringify(payload),
         });
 
         if (res.ok) {
@@ -307,6 +346,9 @@ export default function NewSchedulePage() {
                             placeholder={stationId ? "番組名や出演者名で検索" : "タイトルを入力 (検索には上の2項目が必要)"}
                             className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-radiko-blue"
                         />
+                        <p className="text-[11px] text-slate-400 mt-1.5 ml-1">
+                            ※土曜日01:00などの深夜番組は、<strong>25:00</strong>扱いとなるため「金曜日」等の<strong>前日の曜日</strong>を選択して検索してください。
+                        </p>
 
                         {showSuggestions && filteredPrograms.length > 0 && (
                             <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto ring-1 ring-slate-200/50">

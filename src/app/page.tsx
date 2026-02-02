@@ -8,7 +8,7 @@ import { RecordList } from '@/components/RecordList';
 export const dynamic = 'force-dynamic'; // Ensure fresh data
 
 export default function Home() {
-  // Fetch data directly from DB
+  // DBから直接データを取得
   const schedules = db.prepare('SELECT * FROM schedules ORDER BY start_time ASC').all() as any[]; // quick fix for type
   const records = db.prepare('SELECT * FROM records ORDER BY created_at DESC LIMIT 5').all() as any[];
 
