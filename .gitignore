@@ -47,3 +47,4 @@ next-env.d.ts
 # recordings
 public/records/*
 !public/records/.gitkeep
+scanner.log
