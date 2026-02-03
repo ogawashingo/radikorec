@@ -111,33 +111,15 @@ export class RadikoClient {
     }
 
     async search(keyword: string): Promise<Program[]> {
-        const { authtoken, area_id } = await this.getAuthToken();
+        // 検索APIは認証不要で、area_idを省略すると全エリアを検索します
+        // const { authtoken, area_id } = await this.getAuthToken();
 
-        // Search API
-        // Assuming Premium users can search all areas if they are premium?
-        // Actually, Radiko Premium account allows listening to all areas.
-        // Does search API automatically cover all areas if authenticated with premium session?
-        // Based on script logic for areafree=1, it might.
-        // But area_id param in search API might restrict it.
-        // Let's rely on area_id returned by auth. If premium, area_id is user's area but session allows area-free actions.
-        // However, for search, we might need to specify area or use a special "all" area?
-        // Documentation is scarce.
-        // We will stick to the default behavior: if premium, maybe area_id doesn't matter or covers all.
-        // Or maybe premium users have a different area_id?
-        // The script just gets area_id.
-        // Wait, for premium users, the auth2 returns the area of residence, but the session allows cross-area play.
-        // For SEARCH, `http://radiko.jp/v3/api/program/search` takes `area_id`.
-        // If I pass my local area_id, does it search globally if I have a session?
-        // Probably not. Search might be area-bound.
-        // BUT, `radiko.jp` website search allows searching all stations.
-        // Let's assume standard behavior for now.
-
-        // Need to encode keyword
+        // キーワードをエンコード
         const encodedKey = encodeURIComponent(keyword);
 
-        // Add random delay to be safe (implemented in scanner, but good here too? No, keep it in scanner)
-
-        const url = `http://radiko.jp/v3/api/program/search?key=${encodedKey}&filter=future&area_id=${area_id}`;
+        // API URL構築 (area_idを指定しないことで全国検索になる)
+        // 元のURL: ...&area_id=${area_id}
+        const url = `http://radiko.jp/v3/api/program/search?key=${encodedKey}&filter=future`;
 
         const res = await fetch(url, {
             headers: {
