@@ -213,6 +213,9 @@ export default function KeywordsPage() {
                             placeholder="番組名、出演者名など..."
                             className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-radiko-blue focus:ring-0 outline-none transition-all placeholder:text-slate-400 font-bold text-slate-700"
                         />
+                        <p className="text-[11px] text-slate-400 mt-1.5 ml-1">
+                            ※「AI」などの短すぎる単語は、検索結果が多すぎて正しくヒットしない場合があります。より具体的なキーワードを入力してください。
+                        </p>
                     </div>
                     <button
                         type="submit"

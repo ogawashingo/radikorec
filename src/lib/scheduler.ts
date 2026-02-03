@@ -17,6 +17,7 @@ interface Schedule {
     recurring_pattern?: string;
     day_of_week?: number; // 0-6
     status: string;
+    is_realtime?: number;
 }
 
 export function initScheduler() {
@@ -104,7 +105,9 @@ export function initScheduler() {
                 recStartTime = `${yyyy}-${mm}-${dd}T${s.start_time}`;
             }
 
-            recordRadiko(s.station_id, s.duration, s.title, s.id, recStartTime)
+            const isRealtime = s.is_realtime === 1;
+
+            recordRadiko(s.station_id, s.duration, s.title, s.id, recStartTime, isRealtime)
                 .then((res: any) => {
                     console.log(`Schedule completed: ${s.id}`);
                     if (!s.recurring_pattern) {

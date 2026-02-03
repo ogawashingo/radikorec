@@ -1,7 +1,7 @@
 
 const AUTH_KEY = 'bcd151073c03b352e1ef2fd66c32209da9ca0afa';
 
-interface RadikoAuthResult { // Renamed from AuthResult
+interface RadikoAuthResult { // AuthResultからリネーム
     authtoken: string;
     area_id: string;
 }
@@ -34,7 +34,7 @@ export class RadikoClient {
         const mail = process.env.RADIKO_MAIL;
         const password = process.env.RADIKO_PASSWORD;
 
-        // 1. Premium Login (if configured)
+        // 1. プレミアムログイン（設定されている場合）
         if (mail && password) {
             try {
                 console.log('Attempting Radiko Premium login...');
@@ -56,7 +56,7 @@ export class RadikoClient {
             }
         }
 
-        // 2. Auth1
+        // 2. Auth1（認証ステップ1）
         const auth1Res = await fetch('https://radiko.jp/v2/api/auth1', {
             headers: {
                 'X-Radiko-App': 'pc_html5',
@@ -74,10 +74,10 @@ export class RadikoClient {
 
         if (!token || !length) throw new Error('Invalid Auth1 response');
 
-        // 3. Calculate Partial Key
+        // 3. Partial Key（部分的キー）の計算
         const partialKey = Buffer.from(AUTH_KEY).slice(offset, offset + length).toString('base64');
 
-        // 4. Auth2
+        // 4. Auth2（認証ステップ2）
         const auth2Url = new URL('https://radiko.jp/v2/api/auth2');
         if (radikoSession) {
             auth2Url.searchParams.set('radiko_session', radikoSession);
@@ -99,7 +99,7 @@ export class RadikoClient {
         }
 
         const bodyText = await auth2Res.text();
-        // Body contains area_id: JP13,Tokyo,tokyo,...
+        // レスポンスボディに area_id が含まれる: JP13,Tokyo,tokyo,...
         const areaId = bodyText.split(',')[0];
 
         this.authToken = token;
@@ -118,13 +118,11 @@ export class RadikoClient {
         const encodedKey = encodeURIComponent(keyword);
 
         // API URL構築 (area_idを指定しないことで全国検索になる)
-        // 元のURL: ...&area_id=${area_id}
         const url = `http://radiko.jp/v3/api/program/search?key=${encodedKey}&filter=future`;
 
         const res = await fetch(url, {
             headers: {
-                // 'X-Radiko-AuthToken': authtoken // Curl worked without this
-                // 'User-Agent': ... // Curl defaults curl/x.x
+                // 'X-Radiko-AuthToken': authtoken // ここでの認証トークンは不要
             }
         });
 

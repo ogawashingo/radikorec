@@ -9,6 +9,7 @@ export interface Schedule {
     status: 'pending' | 'processing' | 'completed' | 'failed';
     error_message?: string;
     created_at: string;
+    is_realtime?: number; // 0 or 1
 }
 
 export interface Record {

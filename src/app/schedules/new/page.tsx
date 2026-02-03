@@ -13,6 +13,8 @@ interface Program {
     displayTime: string; // Added displayTime
     duration: number;
     performer: string;
+    info: string;
+    desc: string;
 }
 
 interface Station {
@@ -34,8 +36,12 @@ export default function NewSchedulePage() {
     const router = useRouter();
     const [title, setTitle] = useState("");
     const [stationId, setStationId] = useState("");
-    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState("");
+
+    useEffect(() => {
+        setDate(new Date());
+    }, []);
     const [duration, setDuration] = useState("60");
     const [isWeekly, setIsWeekly] = useState(false);
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -43,6 +49,7 @@ export default function NewSchedulePage() {
     const [availablePrograms, setAvailablePrograms] = useState<Program[]>([]);
     const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isRealtime, setIsRealtime] = useState(false);
 
     // マウント時に放送局を取得
     useEffect(() => {
@@ -119,7 +126,9 @@ export default function NewSchedulePage() {
         const query = title.toLowerCase();
         const filtered = availablePrograms.filter(p =>
             p.title.toLowerCase().includes(query) ||
-            p.performer.toLowerCase().includes(query)
+            (p.performer || "").toLowerCase().includes(query) ||
+            (p.info || "").toLowerCase().includes(query) ||
+            (p.desc || "").toLowerCase().includes(query)
         );
         setFilteredPrograms(filtered);
     }, [title, availablePrograms]);
@@ -179,6 +188,7 @@ export default function NewSchedulePage() {
         }
     };
 
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -201,8 +211,7 @@ export default function NewSchedulePage() {
         if (isWeekly) {
             const today = new Date();
             for (const dayId of selectedDays) {
-                // この曜日(dayId)の次の発生日を計算
-                // (dayId - today.getDay() + 7) % 7 || 7  => 今日の場合は、来週（7日後）に設定される
+                // ... (calculation omitted)
                 const daysUntil = (dayId - today.getDay() + 7) % 7 || 7;
                 const nextOccurrence = new Date(today);
                 nextOccurrence.setDate(today.getDate() + daysUntil);
@@ -216,6 +225,7 @@ export default function NewSchedulePage() {
                     title: title || "無題の録音",
                     recurring_pattern: 'weekly',
                     day_of_week: dayId,
+                    is_realtime: isRealtime
                 });
             }
         } else {
@@ -230,9 +240,11 @@ export default function NewSchedulePage() {
                 title: title || "無題の録音",
                 recurring_pattern: null,
                 day_of_week: null,
+                is_realtime: isRealtime
             });
         }
 
+        // ... (fetch to backend)
         const res = await fetch("/api/schedules", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -260,6 +272,7 @@ export default function NewSchedulePage() {
 
                     {/* 1. 放送局選択 (必須) */}
                     <div className="space-y-2">
+                        {/* ... */}
                         <label className="text-sm font-bold text-slate-600 flex items-center">
                             放送局 <span className="text-rose-500 ml-1">*</span>
                         </label>
@@ -278,6 +291,7 @@ export default function NewSchedulePage() {
 
                     {/* 2. 予約タイプ & 日付/曜日 (必須) */}
                     <div className="space-y-4 pt-2">
+                        {/* ... Weekly/Date picker ... */}
                         <div className="flex items-center space-x-3 pb-2 border-b border-slate-100">
                             <input
                                 type="checkbox"
@@ -323,6 +337,21 @@ export default function NewSchedulePage() {
                                 />
                             </div>
                         )}
+
+                        {/* リアルタイム録音オプション */}
+                        <div className="flex items-center space-x-3 pt-2">
+                            <input
+                                type="checkbox"
+                                id="isRealtime"
+                                checked={isRealtime}
+                                onChange={(e) => setIsRealtime(e.target.checked)}
+                                className="w-5 h-5 rounded border-rose-300 bg-white text-rose-500 focus:ring-rose-500"
+                            />
+                            <label htmlFor="isRealtime" className="text-slate-800 font-bold cursor-pointer flex items-center gap-2">
+                                リアルタイム録音
+                                <span className="text-[10px] text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">タイムフリー非対応番組用</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div className="h-px bg-slate-100 my-2" />
@@ -347,7 +376,8 @@ export default function NewSchedulePage() {
                             className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-radiko-blue"
                         />
                         <p className="text-[11px] text-slate-400 mt-1.5 ml-1">
-                            ※土曜日01:00などの深夜番組は、<strong>25:00</strong>扱いとなるため「金曜日」等の<strong>前日の曜日</strong>を選択して検索してください。
+                            ※土曜日01:00などの深夜番組は、<strong>25:00</strong>扱いとなるため「金曜日」等の<strong>前日の曜日</strong>を選択して検索してください。<br />
+                            ※検索に出てこない番組でも、タイトル・時間・録音時間を直接入力して予約可能です。
                         </p>
 
                         {showSuggestions && filteredPrograms.length > 0 && (
@@ -365,6 +395,11 @@ export default function NewSchedulePage() {
                                             <span className="opacity-30">|</span>
                                             <span className="truncate">{p.performer}</span>
                                         </div>
+                                        {(p.desc || p.info) && (
+                                            <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
+                                                {p.desc || p.info}
+                                            </div>
+                                        )}
                                     </button>
                                 ))}
                             </div>

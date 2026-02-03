@@ -11,7 +11,7 @@ if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
-export async function recordRadiko(stationId: string, durationMin: number, title?: string, scheduleId?: number, startTime?: string) {
+export async function recordRadiko(stationId: string, durationMin: number, title?: string, scheduleId?: number, startTime?: string, isRealtime: boolean = false) {
     return new Promise((resolve, reject) => {
         // ファイル名を決定
         const now = new Date();
@@ -30,14 +30,20 @@ export async function recordRadiko(stationId: string, durationMin: number, title
         // 録音時間 (-d) を指定
         const args = ['-s', stationId, '-d', String(durationMin), '-o', outputPath];
 
-        // 開始日時 (startTime) が指定されている場合は -f オプションを追加 (タイムフリー録音用)
-        if (startTime) {
-            const fValue = startTime.replace(/[-:T]/g, '').slice(0, 12); // YYYYMMDDHHMM
-            args.push('-f', fValue);
+        if (isRealtime) {
+            // リアルタイム録音の場合、-f (タイムフリー指定) を付けない
+            console.log(`[REC ${stationId}] Real-time recording mode enabled.`);
         } else {
-            // 現在時刻を指定 (一応)
-            const nowValue = now.toISOString().replace(/[-:T]/g, '').slice(0, 12);
-            args.push('-f', nowValue);
+            // タイムフリー録音
+            if (startTime) {
+                // 開始日時が指定されている場合
+                const fValue = startTime.replace(/[-:T]/g, '').slice(0, 12); // YYYYMMDDHHMM
+                args.push('-f', fValue);
+            } else {
+                // 指定なしなら現在時刻 (通常のタイムフリー即時録音)
+                const nowValue = now.toISOString().replace(/[-:T]/g, '').slice(0, 12);
+                args.push('-f', nowValue);
+            }
         }
 
         // 環境変数が存在する場合は認証情報を追加

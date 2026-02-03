@@ -24,8 +24,10 @@ export async function GET(request: Request) {
         const blocks = progsXml.split('</prog>').filter(b => b.trim());
 
         const programs = blocks.map(block => {
-            const titleMatch = block.match(/<title>(.*?)<\/title>/);
-            const pfmMatch = block.match(/<pfm>(.*?)<\/pfm>/);
+            const titleMatch = block.match(/<title>([\s\S]*?)<\/title>/);
+            const pfmMatch = block.match(/<pfm>([\s\S]*?)<\/pfm>/);
+            const infoMatch = block.match(/<info>([\s\S]*?)<\/info>/);
+            const descMatch = block.match(/<desc>([\s\S]*?)<\/desc>/);
             const ftMatch = block.match(/ft="(.*?)"/);
             const durMatch = block.match(/dur="(.*?)"/);
 
@@ -52,7 +54,9 @@ export async function GET(request: Request) {
                 time: timeStr, // Real calendar time
                 displayTime,   // 24h+ broadcast day time
                 duration: Math.floor(parseInt(dur, 10) / 60),
-                performer: pfmMatch ? decodeXml(pfmMatch[1]) : ''
+                performer: pfmMatch ? decodeXml(pfmMatch[1]) : '',
+                info: infoMatch ? decodeXml(infoMatch[1]) : '',
+                desc: descMatch ? decodeXml(descMatch[1]) : ''
             };
         });
 

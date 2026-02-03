@@ -58,6 +58,11 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
                   毎週 {['日', '月', '火', '水', '木', '金', '土'][schedule.day_of_week ?? 0]}
                 </span>
               )}
+              {schedule.is_realtime === 1 && (
+                <span className="bg-rose-50 text-rose-600 text-[10px] px-2 py-0.5 rounded font-bold border border-rose-100 animate-pulse">
+                  LIVE
+                </span>
+              )}
             </div>
             <h3 className="font-bold text-slate-800 text-lg sm:text-base leading-tight">
               {schedule.title || '（タイトルなし）'}

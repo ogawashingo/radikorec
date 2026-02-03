@@ -22,7 +22,7 @@ export async function POST(request: Request) {
             let skippedCount = 0;
 
             for (const item of body) {
-                const { station_id, start_time, duration, title, recurring_pattern, day_of_week } = item;
+                const { station_id, start_time, duration, title, recurring_pattern, day_of_week, is_realtime } = item;
                 if (!station_id || !start_time || !duration) continue;
 
                 // 重複チェック: 同じ駅IDかつ開始時間が2分以内の予約が存在するか確認
@@ -36,8 +36,8 @@ export async function POST(request: Request) {
                     continue; // 重複をスキップ
                 }
 
-                placeholders.push('(?, ?, ?, ?, ?, ?)');
-                values.push(station_id, start_time, duration, title || '', recurring_pattern || null, day_of_week !== undefined ? day_of_week : null);
+                placeholders.push('(?, ?, ?, ?, ?, ?, ?)');
+                values.push(station_id, start_time, duration, title || '', recurring_pattern || null, day_of_week !== undefined ? day_of_week : null, is_realtime ? 1 : 0);
             }
 
             if (values.length === 0) {
@@ -47,14 +47,14 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'No valid schedules' }, { status: 400 });
             }
 
-            const sql = `INSERT INTO schedules (station_id, start_time, duration, title, recurring_pattern, day_of_week) VALUES ${placeholders.join(', ')}`;
+            const sql = `INSERT INTO schedules (station_id, start_time, duration, title, recurring_pattern, day_of_week, is_realtime) VALUES ${placeholders.join(', ')}`;
             const result = db.prepare(sql).run(...values);
 
             return NextResponse.json({ success: true, count: result.changes, skipped: skippedCount }, { status: 201 });
         }
 
         // 単一挿入を処理 (オブジェクト)
-        const { station_id, start_time, duration, title, recurring_pattern, day_of_week } = body;
+        const { station_id, start_time, duration, title, recurring_pattern, day_of_week, is_realtime } = body;
 
         if (!station_id || !start_time || !duration) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -71,11 +71,11 @@ export async function POST(request: Request) {
         }
 
         const stmt = db.prepare(`
-      INSERT INTO schedules (station_id, start_time, duration, title, recurring_pattern, day_of_week)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO schedules (station_id, start_time, duration, title, recurring_pattern, day_of_week, is_realtime)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
-        const result = stmt.run(station_id, start_time, duration, title || '', recurring_pattern || null, day_of_week !== undefined ? day_of_week : null);
+        const result = stmt.run(station_id, start_time, duration, title || '', recurring_pattern || null, day_of_week !== undefined ? day_of_week : null, is_realtime ? 1 : 0);
 
         return NextResponse.json({ id: result.lastInsertRowid, ...body }, { status: 201 });
     } catch (error) {

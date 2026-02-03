@@ -18,6 +18,8 @@ interface Program {
     displayTime: string; // Added displayTime
     duration: number;
     performer: string;
+    info: string;
+    desc: string;
 }
 
 export default function EditSchedulePage({ params }: { params: Promise<{ id: string }> }) {
@@ -41,6 +43,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
     // 毎週予約の状態
     const [isWeekly, setIsWeekly] = useState(false);
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
+    const [isRealtime, setIsRealtime] = useState(false);
 
     const daysOfWeek = [
         { id: 0, label: '日' },
@@ -67,6 +70,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
             setStationId(scheduleData.station_id);
             setDuration(String(scheduleData.duration));
             setTitle(scheduleData.title || '');
+            setIsRealtime(scheduleData.is_realtime === 1);
 
             if (scheduleData.recurring_pattern === 'weekly') {
                 setIsWeekly(true);
@@ -169,7 +173,9 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         const lowerTitle = title.toLowerCase();
         const filtered = availablePrograms.filter(p =>
             p.title.toLowerCase().includes(lowerTitle) ||
-            p.performer.toLowerCase().includes(lowerTitle)
+            (p.performer || "").toLowerCase().includes(lowerTitle) ||
+            (p.info || "").toLowerCase().includes(lowerTitle) ||
+            (p.desc || "").toLowerCase().includes(lowerTitle)
         );
         setFilteredPrograms(filtered);
     }, [title, availablePrograms]);
@@ -263,6 +269,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                 title: title || undefined,
                 recurring_pattern: isWeekly ? 'weekly' : null,
                 day_of_week: isWeekly ? primaryDay : null,
+                is_realtime: isRealtime
             };
 
             const res = await fetch(`/api/schedules/${id}`, {
@@ -293,6 +300,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                         title: title || "無題の録音",
                         recurring_pattern: 'weekly',
                         day_of_week: dayId,
+                        is_realtime: isRealtime
                     });
                 }
 
@@ -397,6 +405,21 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                                 />
                             </div>
                         )}
+
+                        {/* リアルタイム録音オプション */}
+                        <div className="flex items-center space-x-3 pt-2">
+                            <input
+                                type="checkbox"
+                                id="isRealtime"
+                                checked={isRealtime}
+                                onChange={(e) => setIsRealtime(e.target.checked)}
+                                className="w-5 h-5 rounded border-rose-300 bg-white text-rose-500 focus:ring-rose-500"
+                            />
+                            <label htmlFor="isRealtime" className="text-slate-800 font-bold cursor-pointer flex items-center gap-2">
+                                リアルタイム録音
+                                <span className="text-[10px] text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">タイムフリー非対応番組用</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div className="h-px bg-slate-100 my-2" />
@@ -420,6 +443,10 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                             placeholder={stationId ? "番組名や出演者名で検索" : "タイトルを入力 (検索には上の2項目が必要)"}
                             className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-radiko-blue"
                         />
+                        <p className="text-[11px] text-slate-400 mt-1.5 ml-1">
+                            ※土曜日01:00などの深夜番組は、<strong>25:00</strong>扱いとなるため「金曜日」等の<strong>前日の曜日</strong>を選択して検索してください。<br />
+                            ※検索に出てこない番組でも、タイトル・時間・録音時間を直接入力して予約可能です。
+                        </p>
 
                         {showSuggestions && filteredPrograms.length > 0 && (
                             <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto ring-1 ring-slate-200/50">
@@ -436,6 +463,11 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                                             <span className="opacity-30">|</span>
                                             <span className="truncate">{p.performer}</span>
                                         </div>
+                                        {(p.desc || p.info) && (
+                                            <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
+                                                {p.desc || p.info}
+                                            </div>
+                                        )}
                                     </button>
                                 ))}
                             </div>
