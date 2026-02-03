@@ -38,10 +38,10 @@ export async function scanAndReserve() {
             const programs = await radiko.search(k.keyword);
             log(`Found ${programs.length} programs from API.`);
 
-            // フィルタ: 未来の番組のみ
+            // フィルタ: 未来の番組（または現在放送中）のみ
             const now = new Date();
-            const futurePrograms = programs.filter(p => new Date(p.start_time) > now);
-            log(`Future programs: ${futurePrograms.length}`);
+            const futurePrograms = programs.filter(p => new Date(p.end_time) > now);
+            log(`Future/Current programs: ${futurePrograms.length}`);
 
             for (const prog of futurePrograms) {
                 log(`Processing: ${prog.title} at ${prog.start_time}`);
