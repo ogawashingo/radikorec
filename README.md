@@ -1,7 +1,7 @@
 # RadikoRec
 
 Radiko の録音をブラウザから管理・再生するための Web インターフェースです。
-Raspberry Pi などの常時稼働マシンでの運用を想定しています。
+Linux(Ubuntu)やRaspberry Pi などの常時稼働マシンでの運用を想定しています。
 
 ## 特徴
 
@@ -26,7 +26,7 @@ Raspberry Pi などの常時稼働マシンでの運用を想定しています�
 
 ### 1. 依存関係のインストール
 
-Raspberry Pi で以下のコマンドを実行します：
+Linux(ubuntu)で以下のコマンドを実行します：
 
 ```bash
 sudo apt update
