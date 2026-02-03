@@ -12,10 +12,24 @@ export function RecordList({ records }: { records: Record[] }) {
   const router = useRouter();
   const { currentRecord, isPlaying, playRecord, togglePlay } = useAudio();
   const [optimisticRecords, setOptimisticRecords] = useState(records);
+  const [stations, setStations] = useState<{ id: string, name: string }[]>([]);
 
   useEffect(() => {
     setOptimisticRecords(records);
   }, [records]);
+
+  useEffect(() => {
+    // 放送局リストを取得
+    fetch('/api/stations')
+      .then(res => res.json())
+      .then(data => setStations(data))
+      .catch(err => console.error('放送局リストの取得に失敗:', err));
+  }, []);
+
+  const getStationLabel = (id: string) => {
+    const station = stations.find(s => s.id === id);
+    return station ? `${id} ${station.name}` : id;
+  };
 
   // グループ化の状態
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -129,7 +143,9 @@ export function RecordList({ records }: { records: Record[] }) {
                         {record.filename}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 font-bold">
-                        <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase border border-slate-200">{record.station_id}</span>
+                        <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase border border-slate-200">
+                          {getStationLabel(record.station_id)}
+                        </span>
                         <span className="mt-0.5 font-medium">{(() => {
                           const d = new Date(record.created_at);
                           return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
