@@ -57,9 +57,12 @@ export function SearchResultModal({ isOpen, onClose, keyword, results, stations,
     };
 
     // 日付を見やすくフォーマット
-    const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        return `${d.getMonth() + 1}/${d.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][d.getDay()]}) ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const formatDate = (startStr: string, endStr: string) => {
+        const d = new Date(startStr);
+        const e = new Date(endStr);
+        const startTime = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+        const endTime = `${e.getHours()}:${String(e.getMinutes()).padStart(2, '0')}`;
+        return `${d.getMonth() + 1}/${d.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][d.getDay()]}) ${startTime}-${endTime}`;
     };
 
     const getStationName = (id: string) => {
@@ -112,7 +115,7 @@ export function SearchResultModal({ isOpen, onClose, keyword, results, stations,
                                                 </span>
                                                 <span className="text-sm font-bold text-radiko-blue flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" />
-                                                    {formatDate(prog.start_time)}
+                                                    {formatDate(prog.start_time, prog.end_time)}
                                                 </span>
                                             </div>
                                             <h3 className="font-bold text-slate-800 mb-1 line-clamp-2">{prog.title}</h3>

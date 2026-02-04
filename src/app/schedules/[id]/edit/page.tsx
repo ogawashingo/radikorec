@@ -365,7 +365,14 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                                 type="checkbox"
                                 id="isWeekly"
                                 checked={isWeekly}
-                                onChange={(e) => setIsWeekly(e.target.checked)}
+                                onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setIsWeekly(checked);
+                                    // 毎週予約をONにした時、すでに日付が設定されていれば、その曜日を初期選択する
+                                    if (checked && date && selectedDays.length === 0) {
+                                        setSelectedDays([date.getDay()]);
+                                    }
+                                }}
                                 className="w-5 h-5 rounded border-slate-300 bg-white text-radiko-blue focus:ring-radiko-blue"
                             />
                             <label htmlFor="isWeekly" className="text-slate-800 font-bold cursor-pointer">

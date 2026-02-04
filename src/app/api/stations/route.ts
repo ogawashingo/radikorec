@@ -1,29 +1,11 @@
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { RadikoClient } from '@/lib/radiko';
 
-const execAsync = promisify(exec);
+const client = new RadikoClient();
 
 export async function GET() {
     try {
-        const { stdout } = await execAsync('./rec_radiko_ts.sh -l');
-
-        // 出力フォーマットチェック: 'ID:Name:Number' (例: 'TBS:TBSラジオ:90')
-        // 改行で分割し、次に':'で分割
-        const stations = stdout
-            .trim()
-            .split('\n')
-            .map(line => {
-                const parts = line.split(':');
-                if (parts.length >= 2) {
-                    return {
-                        id: parts[0].trim(),
-                        name: parts[1].trim()
-                    };
-                }
-                return null;
-            })
-            .filter((s): s is { id: string, name: string } => s !== null);
+        const stations = await client.getStations();
 
         if (stations.length > 0) {
             return NextResponse.json(stations);
@@ -33,7 +15,7 @@ export async function GET() {
     } catch (error) {
         console.error('Failed to fetch stations list:', error);
 
-        // スクリプトが失敗したり空を返した場合は静的リストにフォールバック
+        // Fallback list
         const FALLBACK_STATIONS = [
             { id: 'TBS', name: 'TBSラジオ' },
             { id: 'QRR', name: '文化放送' },
