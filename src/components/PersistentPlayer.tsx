@@ -38,7 +38,8 @@ export function PersistentPlayer() {
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
-    const rates = [1, 1.25, 1.5, 2];
+    const rates = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+    const mobileRates = [1.0, 1.25, 1.5, 2.0]; // Mobile fits less
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-[60] p-4 lg:pl-64">
@@ -76,9 +77,9 @@ export function PersistentPlayer() {
                     {/* Controls */}
                     <div className="flex items-center space-x-2 sm:space-x-4">
                         <button
-                            onClick={() => skip(-15)}
+                            onClick={() => skip(-10)}
                             className="p-2 text-slate-400 hover:text-radiko-blue transition-colors"
-                            title="15秒戻す"
+                            title="10秒戻す"
                         >
                             <RotateCcw className="w-5 h-5" />
                         </button>
@@ -118,9 +119,10 @@ export function PersistentPlayer() {
                         {/* Mobile Speed Toggle */}
                         <button
                             onClick={() => {
-                                const currentIndex = rates.indexOf(playbackRate);
-                                const nextIndex = (currentIndex + 1) % rates.length;
-                                setRate(rates[nextIndex]);
+                                const currentIndex = mobileRates.indexOf(playbackRate);
+                                const nextIndex = (currentIndex + 1) % mobileRates.length;
+                                const nextRate = mobileRates[nextIndex] || 1.0;
+                                setRate(nextRate);
                             }}
                             className="sm:hidden p-2 text-slate-400 hover:text-radiko-blue transition-colors flex flex-col items-center"
                         >
