@@ -1,136 +1,113 @@
 # Deployment Guide
 
 このアプリケーションを実行するための手順です。
+**Docker を使用する方法（推奨）** と、直接 Node.js 環境で動かす方法があります。
 
-## 1. 前提条件 (Prerequisites)
+---
 
-デプロイ先（サーバー等）で以下のソフトウェアが必要です。
+## 方法A: Docker での実行 (推奨) 🐳
 
-- **Node.js**: v18以上推奨 (v20などLTS版推奨)
+最も簡単かつ安定して動作する方法です。
+
+### 1. 前提条件
+- **Docker**
+- **Docker Compose** (または `docker compose` プラグイン)
 - **Git**
-- **System Dependencies**
-  - `ffmpeg`
-  - `curl`
 
-### システムパッケージのインストール
+### 2. セットアップ
 
 ```bash
-sudo apt update
-sudo apt install -y ffmpeg curl git
-```
-
-### Node.jsのインストール (未インストールの場合)
-
-NodeSource からインストールすることをお勧めします。
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-```
-
-## 2. アプリケーションの配置
-
-### Git経由
-
-デプロイ先でリポジトリをクローンします。
-
-```bash
+# 1. リポジトリのクローン
 git clone https://github.com/ogawashingo/radikorec.git radikorec
 cd radikorec
-```
 
-## 3. インストール & ビルド
-
-デプロイ先で以下を実行します。
-
-```bash
-cd ~/radikorec
-npm install
-npm run build
-```
-
-## 4. 実行確認
-
-まずは手動で起動して動作を確認します。
-
-```bash
-npm start
-```
-
-ブラウザから `http://<SERVER_IP>:3000` にアクセスできれば成功です。
-試しに録音を行い、正常に動作するか確認してください。
-
-### 方法A: .envファイルを作成する (推奨)
-プロジェクトルートに `.env` ファイルを作成して設定を保存します。この方法は再起動後も設定が維持されます。
-
-```bash
-# デプロイ先で実行
-cd ~/radikorec
+# 2. 設定ファイルの作成 (.env)
+# 以下の内容で .env ファイルを作成してください
 nano .env
 ```
 
-`.env` ファイルの内容:
+`.env` の内容例:
 ```env
 RADIKO_MAIL="user@example.com"
 RADIKO_PASSWORD="your_password"
 DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
 ```
 
-保存後 (`Ctrl+O`, `Enter`, `Ctrl+X`)、通常通り起動します:
-```bash
-npm start
-```
-
-### 方法B: コマンドライン引数 (一時的)
-動作確認などで一時的に利用する場合:
+### 3. 起動
 
 ```bash
-RADIKO_MAIL="user@example.com" RADIKO_PASSWORD="pass" npm start
+# ビルド & バックグラウンド起動
+docker-compose up -d --build
+```
+(※ `docker-compose` コマンドがない場合は `docker compose` を使用してください)
+
+これだけで完了です。ブラウザから `http://<SERVER_IP>:3000` にアクセスしてください。
+
+### 4. データの永続化
+以下のファイル/ディレクトリがホスト側にマッピングされ、データが保持されます。
+- `records/`: 録音ファイル
+- `radikorec.db`: データベースファイル
+- `.env`: 環境変数設定
+
+### 5. 管理コマンド
+- **停止**: `docker-compose down`
+- **ログ確認**: `docker-compose logs -f`
+
+---
+
+## 方法B: 手動インストール (Node.js + PM2) 🛠️
+
+Dockerを使わず、直接サーバー上で動かす場合の手順です。
+
+### 1. 前提条件
+- **Node.js**: v20以上推奨 (v18+ 必須)
+- **ffmpeg** (必須)
+- **curl**
+
+```bash
+# Ubuntu/Debian の例
+sudo apt update
+sudo apt install -y ffmpeg curl git
+
+# Node.js のインストール
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
 ```
 
-## 5. 常時実行設定 (PM2)
+### 2. インストール & ビルド
 
-バックグラウンドで常時実行させ、OS再起動時も自動起動するように `pm2` の使用を推奨します。
+```bash
+git clone https://github.com/ogawashingo/radikorec.git radikorec
+cd radikorec
+
+npm install
+npm run build
+```
+
+### 3. 環境設定
+プロジェクトルートに `.env` ファイルを作成します（内容はDocker版と同じ）。
+
+### 4. 起動 (PM2推奨)
+OS再起動時も自動起動するように `pm2` の使用を推奨します。
 
 ```bash
 # pm2のインストール
 sudo npm install -g pm2
 
-# アプリケーションの登録
-# 環境変数を設定する場合は --env オプションまたは ecosystem.config.js を使用
-RADIKO_MAIL="user@example.com" RADIKO_PASSWORD="pass" DISCORD_WEBHOOK_URL="..." pm2 start npm --name "radikorec" -- start
+# アプリケーションの登録・起動
+pm2 start npm --name "radikorec" -- start
 
 # 設定の保存 (再起動後も有効にする)
 pm2 save
 pm2 startup
-# 表示されたコマンドを実行してください
 ```
 
-## 6. トラブルシューティング
+---
 
-- **録音が始まらない**: `pm2 logs radikorec` でログを確認してください。
-- **SQLiteのエラー**: `npm install` を実行した環境と実行環境のアーキテクチャが異なると発生します。必ずデプロイ先の環境で `npm install` (または `npm rebuild`) を行ってください。
-- **ffmpegが見つからない**: `PATH` が通っているか確認してください (`which ffmpeg`)。
+## トラブルシューティング
 
-## 7. Dockerでの実行 (推奨)
-
-Docker環境がある場合は、より簡単に実行・管理が可能です。
-
-### 起動
-
-```bash
-# ビルド & 起動
-docker-compose up -d --build
-```
-
-### 停止
-
-```bash
-docker-compose down
-```
-
-### データの永続化
-以下のファイル/ディレクトリがホスト側にマッピングされ、データが保持されます。
-- `records/`: 録音ファイル
-- `radikorec.db`: データベースファイル
-- `.env`: 環境変数設定
+- **録音が始まらない**: ログを確認してください。
+    - Docker: `docker-compose logs -f`
+    - PM2: `pm2 logs radikorec`
+- **SQLiteのエラー (手動版)**: `npm install` を実行した環境と実行環境のアーキテクチャが異なると発生します。必ずデプロイ先の環境で `npm install` を行ってください。
+- **ffmpegが見つからない (手動版)**: `PATH` が通っているか確認してください。Docker版ではコンテナ内に同梱されているため問題になりません。
