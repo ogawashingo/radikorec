@@ -10,7 +10,7 @@ let isSchedulerRunning = false;
 interface Schedule {
     id: number;
     station_id: string;
-    // format YYYY-MM-DDTHH:mm OR HH:mm (for weekly)
+    // フォーマット YYYY-MM-DDTHH:mm または HH:mm (毎週の場合)
     start_time: string;
     duration: number;
     title?: string;

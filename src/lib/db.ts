@@ -18,6 +18,7 @@ export function initDB() {
       title TEXT,
       recurring_pattern TEXT,   -- "weekly" または null
       day_of_week INTEGER,      -- 0=日...6=土 ("weekly"の場合必須)
+
       status TEXT DEFAULT 'pending',
       error_message TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,

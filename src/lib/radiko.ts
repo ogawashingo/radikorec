@@ -136,9 +136,6 @@ export class RadikoClient {
         return data.data;
     }
 
-    /**
-     * 放送局のHLSストリームベースURLを取得
-     */
     async getStreamBaseUrl(stationId: string): Promise<string> {
         // プレミアムステータスを取得するために認証を確実に行う
         await this.getAuthToken();
@@ -232,7 +229,7 @@ export class RadikoClient {
             const ft = ftMatch[1];
             const dur = durMatch ? durMatch[1] : '0';
 
-            // Format time from YYYYMMDDHHMMSS
+            // 時間フォーマット YYYYMMDDHHMMSS からパース
             const progDateStr = ft.substring(0, 8);
             const hours = parseInt(ft.substring(8, 10));
             const minutes = ft.substring(10, 12);
@@ -258,39 +255,38 @@ export class RadikoClient {
             const durationSec = parseInt(dur, 10);
             const endObj = new Date(startObj.getTime() + durationSec * 1000);
 
-            // end_time format: 2024-01-01 12:00:00 (for compatibility with scanner logic, roughly ISO)
+            // end_time フォーマット: 2024-01-01 12:00:00 (スキャナーロジックとの互換性のため、ほぼISO)
             // Scanner uses: new Date(p.end_time)
             const endTimeStr = endObj.toISOString();
 
-            // Status match (not strictly in XML, but derived)
-            // const status = 'future'; // calc if needed
+            // ステータス判定 (XMLには厳密にはないが、導出可能)
+            // const status = 'future'; // 必要なら計算
 
             programs.push({
                 title: titleMatch ? this.decodeXml(titleMatch[1]) : '無題',
-                // BUT scanner.ts:55 const startTimeDate = new Date(prog.start_time);
-                // If start_time is "20240204120000", new Date() might fail in some envs, 
-                // check api/programs/route.ts:53 "start: ft" -> It returns raw FT string.
-                // Wait, api/programs/route.ts returns object with `start`, `time`, `displayTime`.
-                // search() returns `Program[]` which has `start_time`.
-                // Let's stick to the Program interface defined at top of file?
-                // Interface Program defined line 14: start_time: string; // "2024-01-01 12:00:00"
-                // search() API from radiko v3 returns "2024-01-01 12:00:00".
-                // This XML returns "20240101120000".
-                // We should probably normalize to match search() format if possible, OR
-                // update the Caller to handle both.
-                // api/programs/route.ts currently returns specific object shape.
+                // しかし scanner.ts:55 const startTimeDate = new Date(prog.start_time);
+                // start_time が "20240204120000" の場合、環境によっては new Date() が失敗する可能性があります
+                // api/programs/route.ts:53 "start: ft" を確認 -> 生のFT文字列を返しています。
+                // 待ってください、api/programs/route.ts は `start`, `time`, `displayTime` を返します。
+                // search() は `start_time` を持つ `Program[]` を返します。
+                // ファイル先頭で定義された Program インターフェースに従いましょう
+                // Program インターフェース定義 14行目: start_time: string; // "2024-01-01 12:00:00"
+                // radiko v3 の search() API は "2024-01-01 12:00:00" を返します。
+                // この XML は "20240101120000" を返します。
+                // 可能であれば search() の形式に正規化すべきです。あるいは呼び出し元で両方処理するか。
+                // api/programs/route.ts は現在特定のオブジェクト形状を返しています。
 
-                // Re-mapping to match RadikoClient.Program interface roughly, 
-                // OR duplicate the specific shape needed by the frontend...
-                // RadikoClient.search returns specific shape.
-                // Let's implement this method to return what's needed, conforming to Program interface if possible, 
-                // or creating a new interface for Schedule.
+                // RadikoClient.Program インターフェースにだいたい合わせるか、
+                // フロントエンドが必要とする特定の形状を複製するか...
+                // RadikoClient.search は特定の形状を返します。
+                // ここでは必要なものを返すように実装しましょう。可能なら Program インターフェースに準拠するか、
+                // Schedule 用の新しいインターフェースを作成します。
 
-                // Let's just return what `route.ts` constructed, but cleaner.
-                // Actually, let's keep it simple within RadikoClient and let route.ts map it if needed?
-                // Or make RadikoClient return the standard `Program` object.
+                // route.ts が構築していたものを、よりきれいに返すだけにしましょう。
+                // 実際には RadikoClient 内ではシンプルに保ち、route.ts でマッピングさせるべきかも？
+                // それとも RadikoClient が標準的な `Program` オブジェクトを返すようにするか。
 
-                // Standard Program object:
+                // 標準的な Program オブジェクト:
                 // start_time: "2024-01-01 12:00:00"
 
                 start_time: this.formatDateForProgram(startObj),
@@ -298,7 +294,7 @@ export class RadikoClient {
                 station_id: stationId,
                 performer: pfmMatch ? this.decodeXml(pfmMatch[1]) : '',
                 description: descMatch ? this.decodeXml(descMatch[1]) : '',
-                status: 'future' // Simplified
+                status: 'future' // 簡易的
             });
         }
 
