@@ -111,3 +111,26 @@ pm2 startup
 - **録音が始まらない**: `pm2 logs radikorec` でログを確認してください。
 - **SQLiteのエラー**: `npm install` を実行した環境と実行環境のアーキテクチャが異なると発生します。必ずデプロイ先の環境で `npm install` (または `npm rebuild`) を行ってください。
 - **ffmpegが見つからない**: `PATH` が通っているか確認してください (`which ffmpeg`)。
+
+## 7. Dockerでの実行 (推奨)
+
+Docker環境がある場合は、より簡単に実行・管理が可能です。
+
+### 起動
+
+```bash
+# ビルド & 起動
+docker-compose up -d --build
+```
+
+### 停止
+
+```bash
+docker-compose down
+```
+
+### データの永続化
+以下のファイル/ディレクトリがホスト側にマッピングされ、データが保持されます。
+- `records/`: 録音ファイル
+- `radikorec.db`: データベースファイル
+- `.env`: 環境変数設定
