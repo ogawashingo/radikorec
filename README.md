@@ -21,33 +21,39 @@ Linux(Ubuntu)やRaspberry Pi などの常時稼働マシンでの運用を想定
 - **Database**: SQLite ([better-sqlite3](https://github.com/WiseLibs/better-sqlite3))
 - **Scheduling**: [node-cron](https://github.com/node-cron/node-cron)
 - **Core Logic**: Pure TypeScript Implementation (ffmpeg wrapper)
+- **Deployment**: Docker & Docker Compose
 - **Styling**: Tailwind CSS / Lucide Icons
 
-## クイックスタート
+## クイックスタート (Docker) 🐳
 
-### 1. 依存関係のインストール
+最も簡単な導入方法です。
 
-Linux(ubuntu)で以下のコマンドを実行します：
-
-```bash
-sudo apt update
-sudo apt install -y ffmpeg curl
-```
-
-### 2. アプリのセットアップ
+### 1. 起動
 
 ```bash
-npm install
-npm run build
+git clone https://github.com/ogawashingo/radikorec.git radikorec
+cd radikorec
+
+# ビルド & 起動
+docker-compose up -d --build
 ```
 
-### 3. 起動
+これだけで完了です。ブラウザから `http://localhost:3000` にアクセスしてください。
 
-```bash
-npm start
+### 2. 環境設定（推奨）
+プロジェクトルートに `.env` ファイルを作成すると、設定を永続化できます。
+
+```env
+RADIKO_MAIL="user@example.com"
+RADIKO_PASSWORD="your_password"
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
 ```
 
-詳細なデプロイ方法については [DEPLOY.md](./DEPLOY.md) を参照してください。
+---
+
+### 手動セットアップ (Node.js) 🛠️
+
+Dockerを使用しない場合（Node.js + ffmpeg）のセットアップ手順は [DEPLOY.md](./DEPLOY.md) を参照してください。
 
 ## 開発
 
@@ -60,4 +66,3 @@ npm run dev
 ## ライセンス
 
 MIT ライセンス
-
