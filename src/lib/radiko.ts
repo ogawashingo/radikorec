@@ -11,7 +11,7 @@ interface SearchResult {
     data: Program[];
 }
 
-interface Program {
+export interface Program {
     title: string;
     start_time: string; // "2024-01-01 12:00:00"
     end_time: string;
@@ -202,7 +202,127 @@ export class RadikoClient {
         throw new Error(`放送局 ${stationId} のライブストリームURLが見つかりませんでした (AreaFree: ${areaFreeParam})`);
     }
 
+
+    async getProgramSchedule(stationId: string, date: string): Promise<Program[]> {
+        const url = `https://radiko.jp/v3/program/station/date/${date}/${stationId}.xml`;
+        const res = await fetch(url);
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch programs: ${res.status}`);
+        }
+
+        const xml = await res.text();
+        const programs: Program[] = [];
+
+        // <prog> タグで分割して各番組ブロックを処理
+        const blocks = xml.split('</prog>');
+
+        for (const block of blocks) {
+            if (!block.trim()) continue;
+
+            const titleMatch = block.match(/<title>([\s\S]*?)<\/title>/);
+            const pfmMatch = block.match(/<pfm>([\s\S]*?)<\/pfm>/);
+            const infoMatch = block.match(/<info>([\s\S]*?)<\/info>/);
+            const descMatch = block.match(/<desc>([\s\S]*?)<\/desc>/);
+            const ftMatch = block.match(/ft="(.*?)"/);
+            const durMatch = block.match(/dur="(.*?)"/);
+
+            if (!ftMatch) continue;
+
+            const ft = ftMatch[1];
+            const dur = durMatch ? durMatch[1] : '0';
+
+            // Format time from YYYYMMDDHHMMSS
+            const progDateStr = ft.substring(0, 8);
+            const hours = parseInt(ft.substring(8, 10));
+            const minutes = ft.substring(10, 12);
+
+            let displayHours = hours;
+            // リクエストされた日付より翌日の場合、24時間表記に加算 (25:00等)
+            if (progDateStr > date) {
+                displayHours += 24;
+            }
+
+            // const timeStr = `${ft.substring(8, 10)}:${minutes}`;
+
+            // end_time の計算
+            // Node.js の日付計算を使用
+            const startObj = new Date(
+                parseInt(ft.substring(0, 4)),
+                parseInt(ft.substring(4, 6)) - 1,
+                parseInt(ft.substring(6, 8)),
+                parseInt(ft.substring(8, 10)),
+                parseInt(ft.substring(10, 12)),
+                parseInt(ft.substring(12, 14))
+            );
+            const durationSec = parseInt(dur, 10);
+            const endObj = new Date(startObj.getTime() + durationSec * 1000);
+
+            // end_time format: 2024-01-01 12:00:00 (for compatibility with scanner logic, roughly ISO)
+            // Scanner uses: new Date(p.end_time)
+            const endTimeStr = endObj.toISOString();
+
+            // Status match (not strictly in XML, but derived)
+            // const status = 'future'; // calc if needed
+
+            programs.push({
+                title: titleMatch ? this.decodeXml(titleMatch[1]) : '無題',
+                // BUT scanner.ts:55 const startTimeDate = new Date(prog.start_time);
+                // If start_time is "20240204120000", new Date() might fail in some envs, 
+                // check api/programs/route.ts:53 "start: ft" -> It returns raw FT string.
+                // Wait, api/programs/route.ts returns object with `start`, `time`, `displayTime`.
+                // search() returns `Program[]` which has `start_time`.
+                // Let's stick to the Program interface defined at top of file?
+                // Interface Program defined line 14: start_time: string; // "2024-01-01 12:00:00"
+                // search() API from radiko v3 returns "2024-01-01 12:00:00".
+                // This XML returns "20240101120000".
+                // We should probably normalize to match search() format if possible, OR
+                // update the Caller to handle both.
+                // api/programs/route.ts currently returns specific object shape.
+
+                // Re-mapping to match RadikoClient.Program interface roughly, 
+                // OR duplicate the specific shape needed by the frontend...
+                // RadikoClient.search returns specific shape.
+                // Let's implement this method to return what's needed, conforming to Program interface if possible, 
+                // or creating a new interface for Schedule.
+
+                // Let's just return what `route.ts` constructed, but cleaner.
+                // Actually, let's keep it simple within RadikoClient and let route.ts map it if needed?
+                // Or make RadikoClient return the standard `Program` object.
+
+                // Standard Program object:
+                // start_time: "2024-01-01 12:00:00"
+
+                start_time: this.formatDateForProgram(startObj),
+                end_time: this.formatDateForProgram(endObj),
+                station_id: stationId,
+                performer: pfmMatch ? this.decodeXml(pfmMatch[1]) : '',
+                description: descMatch ? this.decodeXml(descMatch[1]) : '',
+                status: 'future' // Simplified
+            });
+        }
+
+        return programs;
+    }
+
+    private formatDateForProgram(d: Date): string {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        // YYYY-MM-DD HH:mm:ss
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    private decodeXml(str: string): string {
+        return str
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'")
+            .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1');
+    }
+
     async getStations(): Promise<{ id: string, name: string }[]> {
+
         const url = 'https://radiko.jp/v3/station/region/full.xml';
         const res = await fetch(url);
         if (!res.ok) throw new Error('放送局リストの取得に失敗しました');

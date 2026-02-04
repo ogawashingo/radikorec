@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { RadikoClient } from '@/lib/radiko';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -14,66 +11,52 @@ export async function GET(request: Request) {
     }
 
     try {
-        const url = `https://radiko.jp/v3/program/station/date/${date}/${stationId}.xml`;
-        const { stdout: xmlContent } = await execAsync(`curl -s "${url}"`);
+        const client = new RadikoClient();
+        const programs = await client.getProgramSchedule(stationId, date);
 
-        // Use a single xmllint call to get all <prog> elements
-        const { stdout: progsXml } = await execAsync(`echo '${xmlContent.replace(/'/g, "'\\''")}' | xmllint --xpath "//prog" -`);
+        // フロントエンドの期待する形式にマッピング
+        const formattedPrograms = programs.map(p => {
+            // p.start_time は "YYYY-MM-DD HH:mm:ss" です
 
-        // Split by </prog> to get individual program blocks
-        const blocks = progsXml.split('</prog>').filter(b => b.trim());
+            const start = new Date(p.start_time);
 
-        const programs = blocks.map(block => {
-            const titleMatch = block.match(/<title>([\s\S]*?)<\/title>/);
-            const pfmMatch = block.match(/<pfm>([\s\S]*?)<\/pfm>/);
-            const infoMatch = block.match(/<info>([\s\S]*?)<\/info>/);
-            const descMatch = block.match(/<desc>([\s\S]*?)<\/desc>/);
-            const ftMatch = block.match(/ft="(.*?)"/);
-            const durMatch = block.match(/dur="(.*?)"/);
+            // 表示時刻のロジック (25:00 など)
 
-            const ft = ftMatch ? ftMatch[1] : '';
-            const dur = durMatch ? durMatch[1] : '0';
+            // 表示時刻を再構築
+            const hours = start.getHours();
+            const minutes = String(start.getMinutes()).padStart(2, '0');
 
-            // Format time from YYYYMMDDHHMMSS
-            const progDateStr = ft.substring(0, 8);
-            const hours = parseInt(ft.substring(8, 10));
-            const minutes = ft.substring(10, 12);
+            // リクエストされた日付文字列 "YYYYMMDD"
+            // 番組の日付文字列 "YYYYMMDD"
+            const pYear = start.getFullYear();
+            const pMonth = String(start.getMonth() + 1).padStart(2, '0');
+            const pDay = String(start.getDate()).padStart(2, '0');
+            const pDateStr = `${pYear}${pMonth}${pDay}`;
 
             let displayHours = hours;
-            // If the program starts on the next day relative to requested date, add 24 to hours
-            if (progDateStr > date) {
+            if (pDateStr > date) {
                 displayHours += 24;
             }
 
-            const timeStr = `${ft.substring(8, 10)}:${minutes}`;
             const displayTime = `${String(displayHours).padStart(2, '0')}:${minutes}`;
+            const timeStr = `${String(hours).padStart(2, '0')}:${minutes}`;
 
             return {
-                title: titleMatch ? decodeXml(titleMatch[1]) : '無題',
-                start: ft,
-                time: timeStr, // Real calendar time
-                displayTime,   // 24h+ broadcast day time
-                duration: Math.floor(parseInt(dur, 10) / 60),
-                performer: pfmMatch ? decodeXml(pfmMatch[1]) : '',
-                info: infoMatch ? decodeXml(infoMatch[1]) : '',
-                desc: descMatch ? decodeXml(descMatch[1]) : ''
+                title: p.title,
+                start: p.start_time, // 互換性のあるフォーマットを維持
+                time: timeStr,
+                displayTime: displayTime,
+                duration: Math.round((new Date(p.end_time).getTime() - start.getTime()) / 60000), // 分単位の長さ
+                performer: p.performer,
+                info: p.description, // descriptionをinfo/descにマッピング
+                desc: p.description
             };
         });
 
-        return NextResponse.json(programs);
+        return NextResponse.json(formattedPrograms);
 
     } catch (error) {
         console.error('Failed to fetch programs:', error);
         return NextResponse.json({ error: 'Failed to fetch programs' }, { status: 500 });
     }
-}
-
-function decodeXml(str: string) {
-    return str
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1');
 }
