@@ -8,16 +8,15 @@
 
 - **Node.js**: v18以上推奨 (v20などLTS版推奨)
 - **Git**
-- **System Dependencies** (`rec_radiko_ts.sh`用)
+- **System Dependencies**
   - `ffmpeg`
   - `curl`
-  - `libxml2-utils` (xmllint)
 
 ### システムパッケージのインストール
 
 ```bash
 sudo apt update
-sudo apt install -y ffmpeg curl libxml2-utils git
+sudo apt install -y ffmpeg curl git
 ```
 
 ### Node.jsのインストール (未インストールの場合)
