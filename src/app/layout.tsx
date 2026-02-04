@@ -3,8 +3,8 @@ import "./globals.css";
 import { ClientLayout } from "@/components/ClientLayout";
 
 export const metadata: Metadata = {
-  title: "RadikoRec",
-  description: "Radiko Recording System via CLI",
+  title: "radikoRec",
+  description: "radiko Recording System via CLI",
 };
 
 export default function RootLayout({

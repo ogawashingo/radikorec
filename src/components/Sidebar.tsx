@@ -39,10 +39,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             )}>
                 <div className="p-6 flex items-center justify-between border-b border-slate-100">
                     <div className="flex items-center space-x-2">
-                        <Radio className="w-8 h-8 text-radiko-blue" />
-                        <span className="text-xl font-bold text-slate-900">
-                            RadikoRec
-                        </span>
+                        <img src="/logo.png" alt="radikoRec" className="h-28 w-auto" />
                     </div>
                 </div>
                 <nav className="flex-1 p-4 space-y-2">
@@ -68,7 +65,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 </nav>
                 <div className="p-4 border-t border-slate-100">
                     <div className="text-xs text-slate-400 text-center">
-                        Radiko Recorder System
+                        radiko Recorder System
                     </div>
                 </div>
             </div>

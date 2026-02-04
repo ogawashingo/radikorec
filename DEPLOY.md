@@ -30,26 +30,13 @@ sudo apt install -y nodejs
 
 ## 2. アプリケーションの配置
 
-### 方法A: Git経由 (推奨)
+### Git経由
 
 デプロイ先でリポジトリをクローンします。
 
 ```bash
 git clone https://github.com/ogawashingo/radikorec.git radikorec
 cd radikorec
-```
-
-
-※ まだリポジトリがない場合は、手元の環境からファイルを転送してください（方法B）。
-
-### 方法B: ファイル転送 (rsync/scp)
-
-手元のマシンからデプロイ先へファイルをコピーします。
-(`node_modules`, `.next`, `.git` は除外して転送し、デプロイ先でインストール・ビルドするのが安全です)
-
-```bash
-# 手元のマシンで実行
-rsync -avz --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '*.db' --exclude '*.sqlite' ./ <USER>@<IP_ADDRESS>:~/radikorec
 ```
 
 ## 3. インストール & ビルド
