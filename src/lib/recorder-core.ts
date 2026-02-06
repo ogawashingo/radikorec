@@ -72,25 +72,27 @@ export class RadikoRecorder {
             url.searchParams.set('type', 'c');
 
             fullUrl = url.toString();
+            currentUrl = url;
             console.log(`[Recorder] TimeFree URL: ${fullUrl}`);
         }
 
         // 3. FFMPEG の実行
         const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-        // 厳密なブラウザ偽装のための追加ヘッダー
-        const headers =
-            `X-Radiko-Authtoken: ${auth.authtoken}\r\n` +
-            `X-Radiko-AreaId: ${auth.area_id}\r\n` +
-            `User-Agent: ${userAgent}\r\n` +
-            `Accept: */*\r\n` +
-            `Accept-Language: ja,en-US;q=0.9,en;q=0.8\r\n` +
-            `Connection: keep-alive`;
+
+        // FFMpegの -headers オプション用
+        // 注意: User-Agent は -user_agent オプションで指定する方が安全
+        const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\n`;
+
+        // デバッグ用: ユーザーが手動で試せるCURLコマンドを出力
+        const curlCmd = `curl -v -H "X-Radiko-Authtoken: ${auth.authtoken}" -H "User-Agent: ${userAgent}" "${currentUrl}"`;
+        console.log(`[Debug] Curl Command:\n${curlCmd}`);
 
         const ffmpegArgs = [
             '-nostdin',
             '-loglevel', 'error', // デバッグ時は info に変更
             '-fflags', '+discardcorrupt',
-            '-headers', headers,
+            '-user_agent', userAgent, // User-Agent は -user_agent で指定
+            '-headers', headers, // その他のヘッダー
             '-http_seekable', '0', // ライブ・タイムフリー問わず必要そう
             '-seekable', '0',
             '-i', fullUrl
