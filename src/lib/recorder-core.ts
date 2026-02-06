@@ -69,7 +69,7 @@ export class RadikoRecorder {
             // url.searchParams.set('end_at', to);   // 不要 (illegal parameter)
             // url.searchParams.set('seek', ft);     // 不要 (illegal parameter)
             // url.searchParams.set('type', 'c');    // 不要 (illegal parameter)
-            url.searchParams.set('lsid', lsid);
+            // url.searchParams.set('lsid', lsid);
             // lsidは必須かは怪しいが、念のため残す。もしくは不要かも。
             // 検索結果によると station_id, ft, to が必須。
 
@@ -82,10 +82,10 @@ export class RadikoRecorder {
 
         // FFMpegの -headers オプション用
         // 注意: User-Agent は -user_agent オプションで指定する方が安全
-        const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\n`;
+        const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\n`;
 
         // デバッグ用: ユーザーが手動で試せるCURLコマンドを出力
-        const curlCmd = `curl -v -H "X-Radiko-Authtoken: ${auth.authtoken}" -H "User-Agent: ${userAgent}" "${fullUrl}"`;
+        const curlCmd = `curl -v -H "X-Radiko-Authtoken: ${auth.authtoken}" -H "X-Radiko-AreaId: ${auth.area_id}" -H "User-Agent: ${userAgent}" "${fullUrl}"`;
         console.log(`[Debug] Curl Command:\n${curlCmd}`);
 
         const ffmpegArgs = [
