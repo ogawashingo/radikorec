@@ -62,7 +62,7 @@ export class RadikoRecorder {
 
             const url = new URL(streamBaseUrl);
             url.searchParams.set('station_id', stationId);
-            url.searchParams.set('l', '15'); // タイムフリーもチャンク長15推奨 (rec_radiko_ts.sh参照)
+            // url.searchParams.set('l', '15'); // タイムフリーには不要 (illegal parameter)
             url.searchParams.set('ft', ft);
             url.searchParams.set('to', to);
             // url.searchParams.set('start_at', ft); // 不要 (illegal parameter)
