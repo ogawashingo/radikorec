@@ -72,7 +72,6 @@ export class RadikoRecorder {
             url.searchParams.set('type', 'c');
 
             fullUrl = url.toString();
-            currentUrl = url;
             console.log(`[Recorder] TimeFree URL: ${fullUrl}`);
         }
 
@@ -84,7 +83,7 @@ export class RadikoRecorder {
         const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\n`;
 
         // デバッグ用: ユーザーが手動で試せるCURLコマンドを出力
-        const curlCmd = `curl -v -H "X-Radiko-Authtoken: ${auth.authtoken}" -H "User-Agent: ${userAgent}" "${currentUrl}"`;
+        const curlCmd = `curl -v -H "X-Radiko-Authtoken: ${auth.authtoken}" -H "User-Agent: ${userAgent}" "${fullUrl}"`;
         console.log(`[Debug] Curl Command:\n${curlCmd}`);
 
         const ffmpegArgs = [
