@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { RadikoClient } from './radiko';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 
 export class RadikoRecorder {
     private client: RadikoClient;
@@ -76,7 +77,9 @@ export class RadikoRecorder {
             // --- タイムフリー録音 (チャンク分割実装) ---
             const streamBaseUrl = await this.client.getStreamBaseUrl(stationId);
 
-            const tmpDir = path.dirname(outputPath);
+            // 一時ファイルは OS の一時ディレクトリ (/tmp など) に作成する
+            // これにより、権限エラー(EACCES)を回避し、recordsディレクトリを汚さない
+            const tmpDir = os.tmpdir();
             const tmpFileBase = `chunk_${crypto.randomBytes(4).toString('hex')}`;
             const fileListPath = path.join(tmpDir, `${tmpFileBase}_filelist.txt`);
 
