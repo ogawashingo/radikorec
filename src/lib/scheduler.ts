@@ -72,18 +72,35 @@ export function initScheduler() {
         `).all(localNowStr) as Schedule[];
 
         // 2. 毎週予約 (weekly)
-        // start_time は 'HH:mm' 形式で保存されている前提
-        // status は管理しない (常に実行対象。ただし、多重起動防止は必要だが、cronが1分刻み＆この処理が1分以内に終わればOK)
-        // 厳密には「前回の実行日時」を記録すべきだが、簡易的に「現在のHH:mmと一致」で判定
         const weeklySchedules = db.prepare(`
             SELECT * FROM schedules 
             WHERE recurring_pattern = 'weekly'
               AND day_of_week = ?
-              AND start_time = ?
-        `).all(currentDayOfWeek, currentTimeStr) as Schedule[];
+        `).all(currentDayOfWeek) as Schedule[];
 
-        // 両方を結合して実行
-        const targets = [...schedules, ...weeklySchedules];
+        // 両方を結合してチェック
+        // One-time schedules (pending) and All Weekly schedules for today
+        // We filter them based on:
+        // - Realtime: Trigger at Start Time
+        // - TimeFree: Trigger at End Time (Start + Duration + Buffer)
+
+        const targets: Schedule[] = [];
+
+        // One-time processing
+        for (const s of schedules) {
+            if (shouldTrigger(s, yyyy, mm, dd, hh, min)) {
+                targets.push(s);
+            }
+        }
+
+        // Weekly processing
+        for (const s of weeklySchedules) {
+            // Weekly schedules have "HH:mm" in start_time
+            // Construct a "Today" version of the schedule
+            if (shouldTriggerWeekly(s, hh, min)) {
+                targets.push(s);
+            }
+        }
 
         for (const s of targets) {
             console.log(`Triggering schedule: ${s.title} (${s.station_id})`);
@@ -149,4 +166,54 @@ export function initScheduler() {
 
         }
     });
+}
+
+function shouldTrigger(s: Schedule, yyyy: number, mm: string, dd: string, hh: string, min: string): boolean {
+    const isRealtime = s.is_realtime === 1;
+    const nowStr = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+
+    // ワンタイムは start_time = YYYY-MM-DDTHH:mm
+    if (isRealtime) {
+        // リアルタイム: 開始時刻以前なら実行 (start_time <= now)
+        // クエリで既に <= ? としているので、ここではPendingならOK
+        // ただし、余りにも過去すぎる(1時間前とか)は無視するか？一旦OKとする
+        return true;
+    } else {
+        // タイムフリー: 終了時刻 + 2分後くらいに実行
+        // start_time から duration を足して終了時刻を計算
+        const start = new Date(s.start_time);
+        const end = new Date(start.getTime() + s.duration * 60000);
+        // バッファ 2分
+        const triggerTime = new Date(end.getTime() + 2 * 60000);
+
+        // トリガー時刻を "HH:mm" で比較するのは難しいので、分単位の差分で見る
+        // 現在時刻とトリガー時刻が「同じ分」であれば実行
+        const current = new Date(nowStr);
+
+        // 差分が 0〜1分以内なら実行
+        const diff = (current.getTime() - triggerTime.getTime()) / 60000;
+        return diff >= 0 && diff < 2; // 2分間のウィンドウ
+    }
+}
+
+function shouldTriggerWeekly(s: Schedule, currentHH: string, currentMin: string): boolean {
+    const isRealtime = s.is_realtime === 1;
+    const [startH, startM] = s.start_time.split(':').map(Number);
+
+    if (isRealtime) {
+        // リアルタイム: 開始時刻と一致したら実行
+        return startH === Number(currentHH) && startM === Number(currentMin);
+    } else {
+        // タイムフリー: (開始 + 時間 + 2分) と一致したら実行
+        const startTotalMin = startH * 60 + startM;
+        const endTotalMin = startTotalMin + s.duration;
+        const triggerTotalMin = endTotalMin + 2; // 2分バッファ
+
+        // 日をまたぐ場合の処理 (24 * 60 = 1440)
+        let targetTotalMin = triggerTotalMin % 1440;
+
+        const currentTotalMin = Number(currentHH) * 60 + Number(currentMin);
+
+        return targetTotalMin === currentTotalMin;
+    }
 }
