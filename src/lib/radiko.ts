@@ -113,7 +113,7 @@ export class RadikoClient {
         return { authtoken: token, area_id: areaId };
     }
 
-    async search(keyword: string): Promise<Program[]> {
+    async search(keyword: string, filter: 'future' | 'past' | 'now' | undefined = 'future'): Promise<Program[]> {
         // 検索APIは認証不要で、area_idを省略すると全エリアを検索します
         // const { authtoken, area_id } = await this.getAuthToken();
 
@@ -121,7 +121,11 @@ export class RadikoClient {
         const encodedKey = encodeURIComponent(keyword);
 
         // API URL構築 (area_idを指定しないことで全国検索になる)
-        const url = `http://radiko.jp/v3/api/program/search?key=${encodedKey}&filter=future`;
+        // filter引数を使用（デフォルトはfuture）
+        let url = `http://radiko.jp/v3/api/program/search?key=${encodedKey}`;
+        if (filter) {
+            url += `&filter=${filter}`;
+        }
 
         const res = await fetch(url, {
             headers: {

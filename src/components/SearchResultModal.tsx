@@ -20,11 +20,26 @@ interface SearchResultModalProps {
     results: Program[];
     stations: { id: string, name: string }[];
     onReserve: (selected: Program[]) => Promise<void>;
+    onDownload: (selected: Program[]) => Promise<void>;
+    currentFilter: 'future' | 'past';
+    onFilterChange: (filter: 'future' | 'past') => void;
+    isLoading: boolean;
 }
 
-export function SearchResultModal({ isOpen, onClose, keyword, results, stations, onReserve }: SearchResultModalProps) {
+export function SearchResultModal({
+    isOpen,
+    onClose,
+    keyword,
+    results,
+    stations,
+    onReserve,
+    onDownload,
+    currentFilter,
+    onFilterChange,
+    isLoading
+}: SearchResultModalProps) {
     const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
-    const [isReserving, setIsReserving] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     if (!isOpen) return null;
 
@@ -46,12 +61,18 @@ export function SearchResultModal({ isOpen, onClose, keyword, results, stations,
         }
     };
 
-    const handleReserve = async () => {
+    const handleSubmit = async () => {
         if (selectedIndices.size === 0) return;
-        setIsReserving(true);
+        setIsProcessing(true);
         const selected = results.filter((_, i) => selectedIndices.has(i));
-        await onReserve(selected);
-        setIsReserving(false);
+
+        if (currentFilter === 'future') {
+            await onReserve(selected);
+        } else {
+            await onDownload(selected);
+        }
+
+        setIsProcessing(false);
         setSelectedIndices(new Set());
         onClose();
     };
@@ -79,21 +100,48 @@ export function SearchResultModal({ isOpen, onClose, keyword, results, stations,
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
 
                 {/* Header */}
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-800">「{keyword}」の検索結果</h2>
-                        <p className="text-sm text-slate-500 mt-1">{results.length} 件の番組が見つかりました</p>
+                <div className="p-6 border-b border-slate-100 bg-slate-50">
+                    <div className="flex justify-between items-center mb-4">
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-800">「{keyword}」の検索結果</h2>
+                        </div>
+                        <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
+
+                    {/* Tabs */}
+                    <div className="flex p-1 bg-slate-200/50 rounded-xl">
+                        <button
+                            onClick={() => onFilterChange('future')}
+                            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${currentFilter === 'future'
+                                    ? 'bg-white text-radiko-blue shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            放送予定 (予約)
+                        </button>
+                        <button
+                            onClick={() => onFilterChange('past')}
+                            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${currentFilter === 'past'
+                                    ? 'bg-white text-radiko-blue shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            タイムフリー (即DL)
+                        </button>
+                    </div>
                 </div>
 
                 {/* List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
-                    {results.length === 0 ? (
+                    {isLoading ? (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin text-radiko-blue opacity-50" />
+                        </div>
+                    ) : results.length === 0 ? (
                         <div className="text-center py-12 text-slate-400">
-                            未来の番組は見つかりませんでした。
+                            {currentFilter === 'future' ? '未来の番組は見つかりませんでした。' : '過去の番組は見つかりませんでした。'}
                         </div>
                     ) : (
                         results.map((prog, index) => {
@@ -148,12 +196,15 @@ export function SearchResultModal({ isOpen, onClose, keyword, results, stations,
                             キャンセル
                         </button>
                         <button
-                            onClick={handleReserve}
-                            disabled={selectedIndices.size === 0 || isReserving}
-                            className="px-6 py-2.5 bg-radiko-blue text-white font-bold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-600 hover:shadow-blue-300 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
+                            onClick={handleSubmit}
+                            disabled={selectedIndices.size === 0 || isProcessing}
+                            className={`px-6 py-2.5 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2 ${currentFilter === 'future'
+                                    ? 'bg-radiko-blue hover:bg-blue-600 shadow-blue-200 hover:shadow-blue-300'
+                                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200 hover:shadow-emerald-300'
+                                }`}
                         >
-                            {isReserving && <Loader2 className="w-4 h-4 animate-spin" />}
-                            {selectedIndices.size} 件を予約
+                            {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {selectedIndices.size} 件を{currentFilter === 'future' ? '予約' : 'ダウンロード'}
                         </button>
                     </div>
                 </div>

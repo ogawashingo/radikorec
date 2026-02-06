@@ -27,6 +27,8 @@ export default function KeywordsPage() {
     const [previewResults, setPreviewResults] = useState<any[]>([]);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
+    const [previewFilter, setPreviewFilter] = useState<'future' | 'past'>('future');
+
     useEffect(() => {
         fetchKeywords();
         fetchStations();
@@ -134,27 +136,37 @@ export default function KeywordsPage() {
         }
     };
 
-    const handlePreview = async (keyword: string) => {
+    const handlePreview = async (keyword: string, filter: 'future' | 'past' = 'future') => {
         setPreviewKeyword(keyword);
+        setPreviewFilter(filter);
         setIsPreviewLoading(true);
+        // Modal is open, loading state inside
+        // If triggered from button, open modal
+        setIsPreviewOpen(true);
+
         try {
             const res = await fetch('/api/keywords/preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keyword })
+                body: JSON.stringify({ keyword, filter })
             });
             const data = await res.json();
             if (data.programs) {
                 setPreviewResults(data.programs);
-                setIsPreviewOpen(true);
             } else {
                 alert('検索に失敗しました');
+                setPreviewResults([]);
             }
         } catch (e) {
             alert('エラーが発生しました');
+            setPreviewResults([]);
         } finally {
             setIsPreviewLoading(false);
         }
+    };
+
+    const handleFilterChange = (filter: 'future' | 'past') => {
+        handlePreview(previewKeyword, filter);
     };
 
     const handleReserveSelected = async (selectedPrograms: any[]) => {
@@ -187,6 +199,41 @@ export default function KeywordsPage() {
             }
         } catch (e) {
             alert('エラーが発生しました');
+        }
+    };
+
+    const handleDownloadSelected = async (selectedPrograms: any[]) => {
+        try {
+            // シリアルに実行、または並列実行
+            let successCount = 0;
+            for (const p of selectedPrograms) {
+                const start = new Date(p.start_time);
+                const end = new Date(p.end_time);
+                const duration = Math.round((end.getTime() - start.getTime()) / 60000);
+                const startTimeStr = p.start_time.replace(' ', 'T').substring(0, 19); // ISO format roughly or "YYYY-MM-DDTHH:mm:ss"
+
+                const res = await fetch('/api/records/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        station_id: p.station_id,
+                        start_time: startTimeStr,
+                        duration,
+                        title: p.title
+                    })
+                });
+
+                if (res.ok) successCount++;
+            }
+
+            if (successCount > 0) {
+                alert(`${successCount} 件のダウンロードを開始しました。完了までしばらくお待ちください。`);
+            } else {
+                alert('ダウンロードの開始に失敗しました');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('通信エラーが発生しました');
         }
     };
 
@@ -306,6 +353,10 @@ export default function KeywordsPage() {
                 results={previewResults}
                 stations={stations}
                 onReserve={handleReserveSelected}
+                onDownload={handleDownloadSelected}
+                currentFilter={previewFilter}
+                onFilterChange={handleFilterChange}
+                isLoading={isPreviewLoading}
             />
 
             <ConfirmDialog
