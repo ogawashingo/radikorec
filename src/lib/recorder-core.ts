@@ -62,14 +62,16 @@ export class RadikoRecorder {
 
             const url = new URL(streamBaseUrl);
             url.searchParams.set('station_id', stationId);
-            url.searchParams.set('start_at', ft);
+            url.searchParams.set('l', '15'); // タイムフリーもチャンク長15推奨 (rec_radiko_ts.sh参照)
             url.searchParams.set('ft', ft);
-            url.searchParams.set('end_at', to);
             url.searchParams.set('to', to);
-            url.searchParams.set('seek', ft);
-            url.searchParams.set('l', String(durationSec)); // 秒単位の期間
+            // url.searchParams.set('start_at', ft); // 不要 (illegal parameter)
+            // url.searchParams.set('end_at', to);   // 不要 (illegal parameter)
+            // url.searchParams.set('seek', ft);     // 不要 (illegal parameter)
+            // url.searchParams.set('type', 'c');    // 不要 (illegal parameter)
             url.searchParams.set('lsid', lsid);
-            url.searchParams.set('type', 'c');
+            // lsidは必須かは怪しいが、念のため残す。もしくは不要かも。
+            // 検索結果によると station_id, ft, to が必須。
 
             fullUrl = url.toString();
             console.log(`[Recorder] TimeFree URL: ${fullUrl}`);
