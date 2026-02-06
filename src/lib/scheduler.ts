@@ -179,12 +179,12 @@ function shouldTrigger(s: Schedule, yyyy: number, mm: string, dd: string, hh: st
         // ただし、余りにも過去すぎる(1時間前とか)は無視するか？一旦OKとする
         return true;
     } else {
-        // タイムフリー: 終了時刻 + 2分後くらいに実行
+        // タイムフリー: 終了時刻 + 5分後くらいに実行
         // start_time から duration を足して終了時刻を計算
         const start = new Date(s.start_time);
         const end = new Date(start.getTime() + s.duration * 60000);
-        // バッファ 2分
-        const triggerTime = new Date(end.getTime() + 2 * 60000);
+        // バッファ 5分 (Radiko側の生成待ち時間を考慮して長めに)
+        const triggerTime = new Date(end.getTime() + 5 * 60000);
 
         // トリガー時刻を "HH:mm" で比較するのは難しいので、分単位の差分で見る
         // 現在時刻とトリガー時刻が「同じ分」であれば実行
@@ -192,7 +192,7 @@ function shouldTrigger(s: Schedule, yyyy: number, mm: string, dd: string, hh: st
 
         // 差分が 0〜1分以内なら実行
         const diff = (current.getTime() - triggerTime.getTime()) / 60000;
-        return diff >= 0 && diff < 2; // 2分間のウィンドウ
+        return diff >= 0 && diff < 2; // 実行ウィンドウは同様
     }
 }
 
@@ -204,10 +204,10 @@ function shouldTriggerWeekly(s: Schedule, currentHH: string, currentMin: string)
         // リアルタイム: 開始時刻と一致したら実行
         return startH === Number(currentHH) && startM === Number(currentMin);
     } else {
-        // タイムフリー: (開始 + 時間 + 2分) と一致したら実行
+        // タイムフリー: (開始 + 時間 + 5分) と一致したら実行
         const startTotalMin = startH * 60 + startM;
         const endTotalMin = startTotalMin + s.duration;
-        const triggerTotalMin = endTotalMin + 2; // 2分バッファ
+        const triggerTotalMin = endTotalMin + 5; // 5分バッファ
 
         // 日をまたぐ場合の処理 (24 * 60 = 1440)
         let targetTotalMin = triggerTotalMin % 1440;

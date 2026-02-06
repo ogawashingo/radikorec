@@ -77,7 +77,14 @@ export class RadikoRecorder {
 
         // 3. FFMPEG の実行
         const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-        const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\nUser-Agent: ${userAgent}`;
+        // 厳密なブラウザ偽装のための追加ヘッダー
+        const headers =
+            `X-Radiko-Authtoken: ${auth.authtoken}\r\n` +
+            `X-Radiko-AreaId: ${auth.area_id}\r\n` +
+            `User-Agent: ${userAgent}\r\n` +
+            `Accept: */*\r\n` +
+            `Accept-Language: ja,en-US;q=0.9,en;q=0.8\r\n` +
+            `Connection: keep-alive`;
 
         const ffmpegArgs = [
             '-nostdin',
