@@ -64,7 +64,8 @@ export class RadikoClient {
                 'X-Radiko-App': 'pc_html5',
                 'X-Radiko-App-Version': '0.0.1',
                 'X-Radiko-Device': 'pc',
-                'X-Radiko-User': 'dummy_user'
+                'X-Radiko-User': 'dummy_user',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
         });
 
