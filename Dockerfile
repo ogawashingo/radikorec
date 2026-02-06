@@ -53,8 +53,8 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# 録音用ディレクトリの作成
-RUN mkdir -p records && chown nextjs:nodejs records
+# 録音用ディレクトリとデータ用ディレクトリの作成
+RUN mkdir -p records data && chown nextjs:nodejs records data
 
 USER nextjs
 

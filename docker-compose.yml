@@ -10,5 +10,5 @@ services:
       # 必要に応じて他の環境変数をここに追加するか、env_file を使用してください
     volumes:
       - ./records:/app/records
-      - ./radikorec.db:/app/radikorec.db
+      - ./radikorec.db:/app/data/radikorec.db
       - ./.env:/app/.env
