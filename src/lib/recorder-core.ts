@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import crypto from 'crypto';
 import { RadikoClient } from './radiko';
 import path from 'path';
+import fs from 'fs';
 
 export class RadikoRecorder {
     private client: RadikoClient;
@@ -33,91 +34,170 @@ export class RadikoRecorder {
 
         // 1. 認証 (エリアIDと認証トークンの取得)
         const auth = await this.client.getAuthToken();
-
-        let fullUrl: string;
         const durationSec = durationMin * 60;
 
         if (isRealtime) {
-            // リアルタイム録音
+            // --- リアルタイム録音 ---
             const liveStreamUrl = await this.client.getLiveStreamBaseUrl(stationId);
             const lsid = this.getLsid();
 
-            // ライブストリームの場合、station_id と lsid が必要。
             const url = new URL(liveStreamUrl);
             url.searchParams.set('station_id', stationId);
-            url.searchParams.set('l', '15'); // チャンク長？（HLSの一般的な設定）
+            url.searchParams.set('l', '15');
             url.searchParams.set('lsid', lsid);
-            url.searchParams.set('type', 'b'); // ライブ放送は通常 type=b
+            url.searchParams.set('type', 'b');
 
-            fullUrl = url.toString();
+            const fullUrl = url.toString();
             console.log(`[Recorder] Live URL: ${fullUrl}`);
-        } else {
-            // タイムフリー録音
-            const streamBaseUrl = await this.client.getStreamBaseUrl(stationId);
-            const endTime = new Date(startTime.getTime() + durationMin * 60000);
 
-            const ft = this.formatRadikoDate(startTime);
-            const to = this.formatRadikoDate(endTime);
+            const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\n`;
+
+            const ffmpegArgs = [
+                '-nostdin',
+                '-loglevel', 'error',
+                '-fflags', '+discardcorrupt',
+                '-user_agent', userAgent,
+                '-headers', headers,
+                '-http_seekable', '0',
+                '-seekable', '0',
+                '-i', fullUrl,
+                '-t', String(durationSec),
+                '-acodec', 'copy',
+                '-vn',
+                '-bsf:a', 'aac_adtstoasc',
+                '-y',
+                outputPath
+            ];
+
+            await this.spawnFfmpeg(ffmpegArgs);
+
+        } else {
+            // --- タイムフリー録音 (チャンク分割実装) ---
+            const streamBaseUrl = await this.client.getStreamBaseUrl(stationId);
+
+            const tmpDir = path.dirname(outputPath);
+            const tmpFileBase = `chunk_${crypto.randomBytes(4).toString('hex')}`;
+            const fileListPath = path.join(tmpDir, `${tmpFileBase}_filelist.txt`);
+
+            const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\n`;
             const lsid = this.getLsid();
 
-            const url = new URL(streamBaseUrl);
-            url.searchParams.set('station_id', stationId);
-            // url.searchParams.set('l', '15'); // タイムフリーには不要 (illegal parameter)
-            url.searchParams.set('ft', ft);
-            url.searchParams.set('to', to);
-            // url.searchParams.set('start_at', ft); // 不要 (illegal parameter)
-            // url.searchParams.set('end_at', to);   // 不要 (illegal parameter)
-            // url.searchParams.set('seek', ft);     // 不要 (illegal parameter)
-            // url.searchParams.set('type', 'c');    // 不要 (illegal parameter)
-            // url.searchParams.set('lsid', lsid);
-            // lsidは必須かは怪しいが、念のため残す。もしくは不要かも。
-            // 検索結果によると station_id, ft, to が必須。
+            const ftStr = this.formatRadikoDate(startTime);
+            // const toStr = this.formatRadikoDate(new Date(startTime.getTime() + durationSec * 1000));
 
-            fullUrl = url.toString();
-            console.log(`[Recorder] TimeFree URL: ${fullUrl}`);
+            let leftSec = durationSec;
+            let currentSeekTime = startTime.getTime();
+            let chunkNo = 0;
+            const chunkFiles: string[] = [];
+
+            // filelist.txt 作成
+            fs.writeFileSync(fileListPath, '');
+
+            try {
+                console.log(`[Recorder] タイムフリー分割ダウンロード開始 (総時間: ${durationSec}秒)`);
+
+                while (leftSec > 0) {
+                    const chunkFile = path.join(tmpDir, `${tmpFileBase}_${chunkNo}.m4a`);
+
+                    // チャンク長計算 (基本300秒)
+                    let l = 300;
+                    if (leftSec < 300) {
+                        if ((leftSec % 5) === 0) {
+                            l = leftSec;
+                        } else {
+                            l = (Math.floor(leftSec / 5) + 1) * 5;
+                        }
+                    }
+
+                    const seekDate = new Date(currentSeekTime);
+                    const endDate = new Date(currentSeekTime + l * 1000);
+
+                    const currentSeekStr = this.formatRadikoDate(seekDate);
+                    const currentEndStr = this.formatRadikoDate(endDate);
+
+                    // URL構築
+                    const url = new URL(streamBaseUrl);
+                    url.searchParams.set('station_id', stationId);
+                    url.searchParams.set('start_at', ftStr); // 全体の開始時刻
+                    url.searchParams.set('ft', ftStr);       // 全体の開始時刻
+                    url.searchParams.set('seek', currentSeekStr); // チャンク開始時刻
+                    url.searchParams.set('end_at', currentEndStr); // チャンク終了時刻
+                    url.searchParams.set('to', currentEndStr);     // チャンク終了時刻
+                    url.searchParams.set('l', String(l));
+                    url.searchParams.set('lsid', lsid);
+                    url.searchParams.set('type', 'c');
+
+                    const fullUrl = url.toString();
+                    console.log(`[Recorder] Chunk ${chunkNo}: ${l}s (${currentSeekStr} - ${currentEndStr})`);
+                    // console.log(`[Debug] URL: ${fullUrl}`);
+
+                    const ffmpegArgs = [
+                        '-nostdin',
+                        '-loglevel', 'error',
+                        '-fflags', '+discardcorrupt',
+                        '-user_agent', userAgent,
+                        '-headers', headers,
+                        '-http_seekable', '0',
+                        '-seekable', '0',
+                        '-i', fullUrl,
+                        '-acodec', 'copy',
+                        '-vn',
+                        '-bsf:a', 'aac_adtstoasc',
+                        '-y',
+                        chunkFile
+                    ];
+
+                    await this.spawnFfmpeg(ffmpegArgs);
+
+                    if (fs.existsSync(chunkFile)) {
+                        chunkFiles.push(chunkFile);
+                        fs.appendFileSync(fileListPath, `file '${chunkFile}'\n`);
+                    } else {
+                        throw new Error(`Chunk download failed: ${chunkFile}`);
+                    }
+
+                    leftSec -= l;
+                    currentSeekTime += l * 1000;
+                    chunkNo++;
+                }
+
+                // 結合
+                console.log(`[Recorder] チャンク結合中...`);
+                // ffmpeg concat demuxer を使用
+                const concatArgs = [
+                    '-f', 'concat',
+                    '-safe', '0',
+                    '-i', fileListPath,
+                    '-c', 'copy',
+                    '-y',
+                    outputPath
+                ];
+                await this.spawnFfmpeg(concatArgs);
+                console.log(`[Recorder] タイムフリー録音完了`);
+
+            } catch (e) {
+                console.error(`[Recorder] タイムフリー録音エラー`, e);
+                // エラー時も一時ファイル削除を行うためスロー
+                throw e;
+            } finally {
+                // 一時ファイル削除
+                try {
+                    if (fs.existsSync(fileListPath)) fs.unlinkSync(fileListPath);
+                    chunkFiles.forEach(f => {
+                        if (fs.existsSync(f)) fs.unlinkSync(f);
+                    });
+                } catch (cleanupErr) {
+                    console.error('Core dump cleanup failed', cleanupErr);
+                }
+            }
         }
-
-        // 3. FFMPEG の実行
-        const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-
-        // FFMpegの -headers オプション用
-        // 注意: User-Agent は -user_agent オプションで指定する方が安全
-        const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\n`;
-
-        // デバッグ用: ユーザーが手動で試せるCURLコマンドを出力
-        const curlCmd = `curl -v -H "X-Radiko-Authtoken: ${auth.authtoken}" -H "X-Radiko-AreaId: ${auth.area_id}" -H "User-Agent: ${userAgent}" "${fullUrl}"`;
-        console.log(`[Debug] Curl Command:\n${curlCmd}`);
-
-        const ffmpegArgs = [
-            '-nostdin',
-            '-loglevel', 'error', // デバッグ時は info に変更
-            '-fflags', '+discardcorrupt',
-            '-user_agent', userAgent, // User-Agent は -user_agent で指定
-            '-headers', headers, // その他のヘッダー
-            '-http_seekable', '0', // ライブ・タイムフリー問わず必要そう
-            '-seekable', '0',
-            '-i', fullUrl
-        ];
-
-        if (isRealtime) {
-            // ライブ録音の場合は -t (時間) で停止させる
-            ffmpegArgs.push('-t', String(durationSec));
-        }
-
-        ffmpegArgs.push(
-            '-acodec', 'copy',
-            '-vn',
-            '-bsf:a', 'aac_adtstoasc',
-            '-y',
-            outputPath
-        );
-
-        await this.spawnFfmpeg(ffmpegArgs);
     }
 
     private spawnFfmpeg(args: string[]): Promise<void> {
         return new Promise((resolve, reject) => {
-            console.log(`[Recorder] ffmpegプロセスを起動します...`);
+            // console.log(`[Recorder] ffmpeg args: ${args.join(' ')}`); // 冗長なので通常はOFF
             const proc = spawn('ffmpeg', args);
 
             let stderr = '';
@@ -135,8 +215,8 @@ export class RadikoRecorder {
                     console.log(`[Recorder] 録音成功`);
                     resolve();
                 } else {
-                    console.error(`[Recorder] 失敗 (コード: ${code})`);
-                    console.error(`[Recorder] Stderr: ${stderr}`);
+                    // console.error(`[Recorder] 失敗 (コード: ${code})`);
+                    // console.error(`[Recorder] Stderr: ${stderr}`);
                     reject(new Error(`ffmpeg exited with code ${code}. Stderr: ${stderr}`));
                 }
             });
