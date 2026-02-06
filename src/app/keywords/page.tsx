@@ -67,9 +67,13 @@ export default function KeywordsPage() {
             if (res.ok) {
                 setNewKeyword('');
                 fetchKeywords();
+            } else {
+                const err = await res.json();
+                alert(`エラー: ${err.error || '追加できませんでした'}`);
             }
         } catch (error) {
-            alert('キーワードの追加に失敗しました');
+            console.error(error);
+            alert('通信エラーが発生しました');
         }
     };
 
