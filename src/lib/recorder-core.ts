@@ -52,13 +52,16 @@ export class RadikoRecorder {
             console.log(`[Recorder] Live URL: ${fullUrl}`);
 
             const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\n`;
+            // Live録音では AreaId ヘッダーを除外してみる（エリアフリー判定に悪影響を与える可能性）
+            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\n`;
 
             const ffmpegArgs = [
                 '-nostdin',
                 '-loglevel', 'error',
                 '-fflags', '+discardcorrupt',
-                '-user_agent', userAgent,
+                '-user_agent', userAgent, // For HTTP
+                '-user-agent', userAgent, // For specific demuxers sometimes
+                '-http_user_agent', userAgent, // For libavformat HTTP
                 '-headers', headers,
                 '-http_seekable', '0',
                 '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
