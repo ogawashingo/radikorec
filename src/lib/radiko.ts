@@ -48,7 +48,8 @@ export class RadikoClient {
                 if (loginRes.ok) {
                     const data = await loginRes.json();
                     radikoSession = data.radiko_session;
-                    this.areaFree = data.areafree === 1;
+                    // 文字列の "1" か 数値の 1 かに対応するため緩い比較を使用
+                    this.areaFree = data.areafree == 1;
                     console.log(`Radiko Premium login successful. AreaFree: ${this.areaFree}`);
                 } else {
                     console.error('Radiko Premium login failed', await loginRes.text());
