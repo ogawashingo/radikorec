@@ -49,11 +49,8 @@ export class RadikoRecorder {
             url.searchParams.set('type', 'b');
 
             const fullUrl = url.toString();
-            console.log(`[Recorder] Live URL: ${fullUrl}`);
-
-            const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            // Live録音では AreaId ヘッダーを除外してみる（エリアフリー判定に悪影響を与える可能性）
-            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\n`;
+            const userAgent = 'curl/7.52.1'; // 一般的なUser-Agentに変更 (Browser UAが弾かれる可能性考慮)
+            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\nX-Radiko-App: pc_html5\r\nX-Radiko-App-Version: 0.0.1\r\nX-Radiko-User: dummy_user\r\nX-Radiko-Device: pc\r\n`;
 
             const ffmpegArgs = [
                 '-nostdin',
