@@ -216,7 +216,10 @@ export default function NewSchedulePage() {
                 const nextOccurrence = new Date(today);
                 nextOccurrence.setDate(today.getDate() + daysUntil);
                 const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
-                const startTime = `${dateStr}T${time}`;
+                // For weekly, we just want the time string (e.g. "25:30")
+                // But previously we sent ISO.
+                // Now we send "HH:mm" (or "25:30") directly.
+                const startTime = time;
 
                 payload.push({
                     station_id: stationId,
@@ -420,10 +423,12 @@ export default function NewSchedulePage() {
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-600">開始時間</label>
                             <input
-                                type="time"
+                                type="text"
                                 required
                                 value={time}
                                 onChange={(e) => setTime(e.target.value)}
+                                placeholder="例: 25:30, 01:30"
+                                pattern="^([0-2]?[0-9]|3[0-5]):[0-5][0-9]$"
                                 className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-radiko-blue"
                             />
                         </div>
