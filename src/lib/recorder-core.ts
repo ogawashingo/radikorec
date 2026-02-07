@@ -61,6 +61,7 @@ export class RadikoRecorder {
                 '-user_agent', userAgent,
                 '-headers', headers,
                 '-http_seekable', '0',
+                '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
                 '-seekable', '0',
                 '-i', fullUrl,
                 '-t', String(durationSec),
@@ -143,6 +144,7 @@ export class RadikoRecorder {
                         '-user_agent', userAgent,
                         '-headers', headers,
                         '-http_seekable', '0',
+                        '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
                         '-seekable', '0',
                         '-i', fullUrl,
                         '-acodec', 'copy',
