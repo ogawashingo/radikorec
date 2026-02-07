@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface ConfirmDialogProps {
     isOpen: boolean;
@@ -21,6 +22,27 @@ export function ConfirmDialog({
     cancelText = 'キャンセル',
     isDestructive = true
 }: ConfirmDialogProps) {
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!isOpen) return;
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                onConfirm();
+                onClose();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            window.addEventListener('keydown', handleKeyDown);
+        }
+
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onConfirm, onClose]);
+
     if (!isOpen) return null;
 
     return (
