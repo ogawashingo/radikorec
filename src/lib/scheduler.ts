@@ -43,10 +43,9 @@ export function initScheduler() {
 
     // 1分ごとに実行
     cron.schedule('* * * * *', async () => {
-        const now = new Date();
-        const JST_OFFSET = 9 * 60; // JST は UTC+9
-        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-        const jstNow = new Date(utc + (JST_OFFSET * 60000));
+        // Docker container is now set to JST (TZ=Asia/Tokyo)
+        // So new Date() returns correct local time. No manual offset needed.
+        const jstNow = new Date();
 
         // JSTでの現在時刻文字列 (YYYY-MM-DDTHH:mm)
         // ISOStringはUTCを返すため、手動構築またはオフセット調整済みDateを使用
