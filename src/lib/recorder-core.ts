@@ -79,7 +79,7 @@ export class RadikoRecorder {
                 outputPath
             ];
 
-            await this.spawnFfmpeg(ffmpegArgs);
+            await this.spawnFfmpeg(ffmpegArgs, 'ライブ録音');
 
         } else {
             // --- タイムフリー録音 (チャンク分割実装) ---
@@ -165,7 +165,7 @@ export class RadikoRecorder {
                         chunkFile
                     ];
 
-                    await this.spawnFfmpeg(ffmpegArgs);
+                    await this.spawnFfmpeg(ffmpegArgs, `Chunk ${chunkNo}`);
 
                     if (fs.existsSync(chunkFile)) {
                         chunkFiles.push(chunkFile);
@@ -190,7 +190,7 @@ export class RadikoRecorder {
                     '-y',
                     outputPath
                 ];
-                await this.spawnFfmpeg(concatArgs);
+                await this.spawnFfmpeg(concatArgs, 'チャンク結合');
                 console.log(`[Recorder] タイムフリー録音完了`);
 
             } catch (e) {
@@ -211,16 +211,11 @@ export class RadikoRecorder {
         }
     }
 
-    private spawnFfmpeg(args: string[]): Promise<void> {
+    private spawnFfmpeg(args: string[], label: string = 'ffmpeg'): Promise<void> {
         return new Promise((resolve, reject) => {
-            // console.log(`[Recorder] ffmpeg args: ${args.join(' ')}`); // 冗長なので通常はOFF
             const proc = spawn('ffmpeg', args);
 
             let stderr = '';
-
-            proc.stdout.on('data', (data) => {
-                // console.log(`[ffmpeg stdout] ${data}`);
-            });
 
             proc.stderr.on('data', (data) => {
                 stderr += data.toString();
@@ -228,17 +223,15 @@ export class RadikoRecorder {
 
             proc.on('close', (code) => {
                 if (code === 0) {
-                    console.log(`[Recorder] 録音成功`);
+                    console.log(`[Recorder] ${label} 成功`);
                     resolve();
                 } else {
-                    // console.error(`[Recorder] 失敗 (コード: ${code})`);
-                    // console.error(`[Recorder] Stderr: ${stderr}`);
-                    reject(new Error(`ffmpeg exited with code ${code}. Stderr: ${stderr}`));
+                    reject(new Error(`${label} failed with code ${code}. Stderr: ${stderr}`));
                 }
             });
 
             proc.on('error', (err) => {
-                console.error(`[Recorder] 起動エラー`, err);
+                console.error(`[Recorder] ${label} 起動エラー`, err);
                 reject(err);
             });
         });

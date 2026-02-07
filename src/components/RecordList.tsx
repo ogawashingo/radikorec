@@ -66,7 +66,7 @@ export function RecordList({ records }: { records: Record[] }) {
 
     return sortedKeys.map(key => ({
       title: key,
-      items: groups[key].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      items: groups[key].sort((a, b) => new Date(b.start_time || b.created_at).getTime() - new Date(a.start_time || a.created_at).getTime())
     }));
   }, [optimisticRecords]);
 
@@ -147,8 +147,20 @@ export function RecordList({ records }: { records: Record[] }) {
                           {getStationLabel(record.station_id)}
                         </span>
                         <span className="mt-0.5 font-medium">{(() => {
-                          const d = new Date(record.created_at);
-                          return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                          // start_time (ISO string) を優先的に使用
+                          const timeSource = record.start_time || record.created_at;
+                          const d = new Date(timeSource);
+
+                          // ブラウザのロケール設定に関わらず JST で表示するための調整
+                          // Intl.DateTimeFormat を使用するのが確実
+                          return new Intl.DateTimeFormat('ja-JP', {
+                            month: 'numeric',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                            timeZone: 'Asia/Tokyo'
+                          }).format(d);
                         })()}</span>
                         <span className="hidden sm:inline opacity-30 mt-0.5">•</span>
                         <span className="mt-0.5 font-medium">{

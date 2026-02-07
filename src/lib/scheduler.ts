@@ -109,13 +109,18 @@ export function initScheduler() {
             }
 
             // 録音実行
-            // タイムフリー録音用引数計算:
-            // ワンタイムなら s.start_time そのもの (YYYY-MM-DDTHH:mm)
-            // 毎週予約なら、現在トリガーされた時刻 (localNowStr) を使用
-            // これにより "25:30" などの深夜表記も、実際の "翌日01:30" (YYYY-MM-DDTHH:mm) として渡される
+            // 毎週予約なら、スケジュールの設定内容から正確な開始日時を算出する
             let recStartTime = s.start_time;
             if (s.recurring_pattern === 'weekly') {
-                recStartTime = localNowStr;
+                const [h, m] = s.start_time.split(':').map(Number);
+                // 一旦「今日」の日付でオブジェクトを作成 (h >= 24 の場合、自動的に翌日に繰り越される)
+                const programDate = new Date(jstNow.getFullYear(), jstNow.getMonth(), jstNow.getDate(), h, m);
+
+                // もしスケジュールの日付が「今日」でない（＝昨日 >24h の番組が今日トリガーされた）場合、1日戻す
+                if (s.day_of_week !== currentDayOfWeek) {
+                    programDate.setDate(programDate.getDate() - 1);
+                }
+                recStartTime = programDate.toISOString();
             }
 
             const isRealtime = s.is_realtime === 1;
@@ -136,7 +141,7 @@ export function initScheduler() {
                             { name: 'サイズ', value: formatFileSize(res.size || 0), inline: true },
                             { name: '録音時間', value: `${s.duration}分`, inline: true }
                         ],
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString() // Discord expects ISO in field, but we'll use actual JST in description if needed
                     });
                 })
                 .catch(err => {
@@ -156,7 +161,7 @@ export function initScheduler() {
                             { name: '放送局', value: s.station_id, inline: true },
                             { name: '録音時間', value: `${s.duration}分`, inline: true }
                         ],
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString() // Discord expects ISO in field, but we'll use actual JST in description if needed
                     });
                 });
 

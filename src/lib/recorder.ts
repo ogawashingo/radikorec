@@ -12,14 +12,26 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 
 export async function recordRadiko(stationId: string, durationMin: number, title?: string, scheduleId?: number, startTime?: string, isRealtime: boolean = false) {
     return new Promise(async (resolve, reject) => {
-        // ファイル名を決定 (現地時間を使用するためにISOStringではなく手動フォーマット)
         const now = new Date();
-        const Y = now.getFullYear();
-        const M = String(now.getMonth() + 1).padStart(2, '0');
-        const D = String(now.getDate()).padStart(2, '0');
-        const h = String(now.getHours()).padStart(2, '0');
-        const m = String(now.getMinutes()).padStart(2, '0');
-        const s = String(now.getSeconds()).padStart(2, '0');
+        // startTime 文字列を Date 型へ変換
+        let startTimeDate: Date;
+        if (startTime) {
+            startTimeDate = new Date(startTime);
+            if (isNaN(startTimeDate.getTime())) {
+                console.warn(`無効な開始時刻: ${startTime}, 現在時刻を使用します。`);
+                startTimeDate = now;
+            }
+        } else {
+            startTimeDate = now;
+        }
+
+        // ファイル名を決定 (startTimeDate を使用)
+        const Y = startTimeDate.getFullYear();
+        const M = String(startTimeDate.getMonth() + 1).padStart(2, '0');
+        const D = String(startTimeDate.getDate()).padStart(2, '0');
+        const h = String(startTimeDate.getHours()).padStart(2, '0');
+        const m = String(startTimeDate.getMinutes()).padStart(2, '0');
+        const s = String(startTimeDate.getSeconds()).padStart(2, '0');
         const timestamp = `${Y}${M}${D}${h}${m}${s}`;
 
         let safeTitle = stationId;
@@ -32,18 +44,6 @@ export async function recordRadiko(stationId: string, durationMin: number, title
         const outputPath = path.join(OUTPUT_DIR, filename);
 
         const recorder = new RadikoRecorder();
-
-        // startTime 文字列を Date 型へ変換
-        let startTimeDate: Date;
-        if (startTime) {
-            startTimeDate = new Date(startTime);
-            if (isNaN(startTimeDate.getTime())) {
-                console.warn(`無効な開始時刻: ${startTime}, 現在時刻を使用します。`);
-                startTimeDate = now;
-            }
-        } else {
-            startTimeDate = now;
-        }
 
         try {
             await recorder.record(stationId, startTimeDate, durationMin, outputPath, isRealtime);
@@ -64,7 +64,8 @@ export async function recordRadiko(stationId: string, durationMin: number, title
         INSERT INTO records (filename, station_id, title, start_time, duration, file_path, size)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-                stmt.run(filename, stationId, title || null, now.toISOString(), durationMin, `/records/${filename}`, size);
+                // データベースには本来の番組開始時刻 (startTimeDate) を保存する
+                stmt.run(filename, stationId, title || null, startTimeDate.toISOString(), durationMin, `/records/${filename}`, size);
 
                 resolve({ success: true, filename, size });
 
