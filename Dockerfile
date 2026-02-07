@@ -35,6 +35,9 @@ ENV NODE_ENV production
 # タイムゾーン設定
 ENV TZ=Asia/Tokyo
 
+# tzdata のインストール (slimイメージには含まれていないため)
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
+
 # 静的リンクされた ffmpeg バイナリをコピー (サイズ削減のため)
 # Docker Hub の mwader/static-ffmpeg イメージからバイナリだけを取得
 COPY --from=mwader/static-ffmpeg:6.1 /ffmpeg /usr/local/bin/

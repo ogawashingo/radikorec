@@ -12,9 +12,15 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 
 export async function recordRadiko(stationId: string, durationMin: number, title?: string, scheduleId?: number, startTime?: string, isRealtime: boolean = false) {
     return new Promise(async (resolve, reject) => {
-        // ファイル名を決定
+        // ファイル名を決定 (現地時間を使用するためにISOStringではなく手動フォーマット)
         const now = new Date();
-        const timestamp = now.toISOString().replace(/[-:T]/g, '').split('.')[0];
+        const Y = now.getFullYear();
+        const M = String(now.getMonth() + 1).padStart(2, '0');
+        const D = String(now.getDate()).padStart(2, '0');
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        const timestamp = `${Y}${M}${D}${h}${m}${s}`;
 
         let safeTitle = stationId;
         if (title) {
