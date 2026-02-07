@@ -71,11 +71,12 @@ export function initScheduler() {
         `).all(localNowStr) as Schedule[];
 
         // 2. 毎週予約 (weekly)
+        const prevDayOfWeek = (currentDayOfWeek - 1 + 7) % 7;
         const weeklySchedules = db.prepare(`
             SELECT * FROM schedules 
             WHERE recurring_pattern = 'weekly'
-              AND day_of_week = ?
-        `).all(currentDayOfWeek) as Schedule[];
+              AND day_of_week IN (?, ?)
+        `).all(currentDayOfWeek, prevDayOfWeek) as Schedule[];
 
         // 両方を結合してチェック
         // One-time schedules (pending) and All Weekly schedules for today
@@ -94,9 +95,7 @@ export function initScheduler() {
 
         // Weekly processing
         for (const s of weeklySchedules) {
-            // Weekly schedules have "HH:mm" in start_time
-            // Construct a "Today" version of the schedule
-            if (shouldTriggerWeekly(s, hh, min)) {
+            if (shouldTriggerWeekly(s, hh, min, currentDayOfWeek)) {
                 targets.push(s);
             }
         }
@@ -112,13 +111,11 @@ export function initScheduler() {
             // 録音実行
             // タイムフリー録音用引数計算:
             // ワンタイムなら s.start_time そのもの (YYYY-MM-DDTHH:mm)
-            // 毎週予約なら、今日の現在時刻 (YYYY-MM-DDTHH:mm) または 指定時刻
-            // ※ 毎週予約は「現在放送中」を録音するケースと「タイムフリー」のケースがありうるが、
-            //    このSchedulerはリアルタイムまたは過去即時実行用。
-            //    毎週予約で「HH:mm」指定の場合、それは「今日のHH:mm」を意味する。
+            // 毎週予約なら、現在トリガーされた時刻 (localNowStr) を使用
+            // これにより "25:30" などの深夜表記も、実際の "翌日01:30" (YYYY-MM-DDTHH:mm) として渡される
             let recStartTime = s.start_time;
             if (s.recurring_pattern === 'weekly') {
-                recStartTime = `${yyyy}-${mm}-${dd}T${s.start_time}`;
+                recStartTime = localNowStr;
             }
 
             const isRealtime = s.is_realtime === 1;
@@ -195,16 +192,36 @@ function shouldTrigger(s: Schedule, yyyy: number, mm: string, dd: string, hh: st
     }
 }
 
-function shouldTriggerWeekly(s: Schedule, currentHH: string, currentMin: string): boolean {
+function shouldTriggerWeekly(s: Schedule, currentHH: string, currentMin: string, currentDayOfWeek: number): boolean {
     const isRealtime = s.is_realtime === 1;
-    const [startH, startM] = s.start_time.split(':').map(Number);
+    const [startH, startM] = s.start_time.split(':').map(Number); // e.g. "25:30" -> 25, 30
+
+    let targetH = startH;
+    let targetM = startM;
+
+    // Determine effective target hour for TODAY
+    if (s.day_of_week !== currentDayOfWeek) {
+        // This is a schedule from a different day (Yesterday)
+        // It triggers today ONLY if it is a Late Night schedule (>24h)
+        if (startH >= 24) {
+            targetH = startH - 24;
+        } else {
+            return false;
+        }
+    } else {
+        // This is a schedule for Today.
+        // If startH >= 24, it runs Tomorrow (so ignore Today)
+        if (startH >= 24) {
+            return false;
+        }
+    }
 
     if (isRealtime) {
         // リアルタイム: 開始時刻と一致したら実行
-        return startH === Number(currentHH) && startM === Number(currentMin);
+        return targetH === Number(currentHH) && targetM === Number(currentMin);
     } else {
         // タイムフリー: (開始 + 時間 + 5分) と一致したら実行
-        const startTotalMin = startH * 60 + startM;
+        const startTotalMin = targetH * 60 + targetM;
         const endTotalMin = startTotalMin + s.duration;
         const triggerTotalMin = endTotalMin + 5; // 5分バッファ
 
