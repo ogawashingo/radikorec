@@ -45,21 +45,23 @@ export class RadikoRecorder {
             const url = new URL(liveStreamUrl);
             url.searchParams.set('station_id', stationId);
             url.searchParams.set('l', '15');
-            url.searchParams.set('lsid', lsid);
-            url.searchParams.set('type', 'b');
+            url.searchParams.set('lsid', ''); // radi.shに合わせて空にする
+            url.searchParams.set('type', 'c'); // radi.shに合わせて 'c' に変更
 
             const fullUrl = url.toString();
-            const userAgent = 'curl/7.52.1'; // 一般的なUser-Agentに変更 (Browser UAが弾かれる可能性考慮)
-            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\nX-Radiko-App: pc_html5\r\nX-Radiko-App-Version: 0.0.1\r\nX-Radiko-User: dummy_user\r\nX-Radiko-Device: pc\r\n`;
+            // radi.sh は User-Agent を curl, wget などに偽装せず FFmpeg デフォルト(Lavf)か、あるいは指定なしかも。
+            // しかしここでは安全のため curl にしておく
+            const userAgent = 'curl/7.52.1';
+
+            // radi.sh は AuthToken のみ送信している
+            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\n`;
 
             const ffmpegArgs = [
                 '-nostdin',
                 '-loglevel', 'error',
                 '-fflags', '+discardcorrupt',
-                '-user_agent', userAgent, // For HTTP
-                '-user-agent', userAgent, // For specific demuxers sometimes
-                '-http_user_agent', userAgent, // For libavformat HTTP
                 '-headers', headers,
+                '-user_agent', userAgent,
                 '-http_seekable', '0',
                 '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
                 '-multiple_requests', '1', // HTTP keep-alive
