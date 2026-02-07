@@ -46,11 +46,20 @@ export class RadikoClient {
                 });
 
                 if (loginRes.ok) {
-                    const data = await loginRes.json();
-                    radikoSession = data.radiko_session;
-                    // 文字列の "1" か 数値の 1 かに対応するため緩い比較を使用
-                    this.areaFree = data.areafree == 1;
-                    console.log(`Radiko Premium login successful. AreaFree: ${this.areaFree}`);
+                    try {
+                        const data = await loginRes.json();
+                        radikoSession = data.radiko_session;
+                        // 文字列の "1" か 数値の 1 かに対応するため緩い比較を使用
+                        this.areaFree = data.areafree == 1;
+                        console.log(`Radiko Premium login successful. AreaFree: ${this.areaFree}`);
+                    } catch (parseErr: any) {
+                        // Node.js 20+ specific error handling for closed stream
+                        if (parseErr.message && parseErr.message.includes('ReadableStream is already closed')) {
+                            console.warn('Suppressing ReadableStream error during login response parsing (known Node.js issue)');
+                        } else {
+                            throw parseErr;
+                        }
+                    }
                 } else {
                     console.error('Radiko Premium login failed', await loginRes.text());
                 }
