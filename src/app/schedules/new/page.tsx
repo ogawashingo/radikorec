@@ -135,36 +135,27 @@ export default function NewSchedulePage() {
 
     const handleSelectProgram = (p: Program) => {
         setTitle(p.title);
-        setTime(p.time);
+        // setTime(p.time); // Logic below decides time
         setDuration(String(p.duration));
 
         const progDateStr = p.start.substring(0, 8); // YYYYMMDD
 
         if (isWeekly && selectedDays.length > 0) {
-            // 毎週予約の場合、番組が「明日」（深夜番組）かどうかをチェック
-            // 現在選択されている曜日に対して、期待される日付を再計算して比較する必要がある
-            const today = new Date();
-            const todayDayOfWeek = today.getDay();
-            const targetDayOfWeek = selectedDays[0];
-            let daysUntil = targetDayOfWeek - todayDayOfWeek;
-            if (daysUntil < 0) daysUntil += 7;
+            // 毎週予約の場合:
+            // APIから返される番組リストは、すでに選択された曜日（Radio Day）に基づいています。
+            // したがって、曜日を変更する必要はありません。
+            // 検索結果の「表示時間 (25:30など)」をそのまま使用します。
 
-            // 番組の放送日が、ターゲット曜日と異なるかチェック
-            const pDate = new Date(
-                parseInt(progDateStr.substring(0, 4)),
-                parseInt(progDateStr.substring(4, 6)) - 1,
-                parseInt(progDateStr.substring(6, 8))
-            );
-            const pDay = pDate.getDay();
+            setTime(p.displayTime);
 
-            if (pDay !== targetDayOfWeek) {
-                // 番組の放送曜日が、選択中の曜日と異なる（例：金曜深夜25時 → 土曜未明）
-                setSelectedDays([pDay]);
-                alert(`※深夜等のため、登録曜日を「${daysOfWeek.find(d => d.id === pDay)?.label}」に変更しました。`);
-            }
+            // 以前のロジックでは「翌日なら曜日を変更」していましたが、
+            // Radio Day基準のリストから選んでいる以上、その曜日の番組として扱うべきです。
+            // (例: 土曜のリストにある "25:30" は、土曜日の番組)
         }
         else if (date) {
             // 単発予約のロジック
+            setTime(p.time); // Default to standard time for one-time
+
             const currentDateStr = date.toLocaleDateString('sv-SE').replace(/-/g, '');
             if (progDateStr > currentDateStr && !isWeekly) {
                 // 翌日の日付としてパースして設定
@@ -176,6 +167,9 @@ export default function NewSchedulePage() {
                 setDate(nextDay);
                 alert(`※深夜等のため、日付を「${nextDay.toLocaleDateString()}」に変更しました。`);
             }
+        } else {
+            // Fallback if no date selected yet (shouldn't happen due to default)
+            setTime(p.time);
         }
         setShowSuggestions(false);
     };

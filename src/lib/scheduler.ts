@@ -194,7 +194,11 @@ function shouldTrigger(s: Schedule, yyyy: number, mm: string, dd: string, hh: st
 
 function shouldTriggerWeekly(s: Schedule, currentHH: string, currentMin: string, currentDayOfWeek: number): boolean {
     const isRealtime = s.is_realtime === 1;
-    const [startH, startM] = s.start_time.split(':').map(Number); // e.g. "25:30" -> 25, 30
+    let timePart = s.start_time;
+    if (s.start_time.includes('T')) {
+        timePart = s.start_time.split('T')[1];
+    }
+    const [startH, startM] = timePart.split(':').map(Number); // e.g. "25:30" -> 25, 30
 
     let targetH = startH;
     let targetM = startM;

@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         console.error('Failed to create keyword:', error);
-        return NextResponse.json({ error: 'Failed to create keyword' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return NextResponse.json({ error: `Failed to create keyword: ${errorMessage}` }, { status: 500 });
     }
 }
