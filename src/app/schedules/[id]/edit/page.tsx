@@ -80,6 +80,9 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     const dateObj = new Date(sTime);
                     const hh = String(dateObj.getHours()).padStart(2, '0');
                     const mm = String(dateObj.getMinutes()).padStart(2, '0');
+                    // 単純にHH:mmにするが、もし可能なら深夜判定して25:xxに戻すと親切かも
+                    // しかし、DBに保存された時点で情報が失われている可能性もあるため、
+                    // ここでは一旦そのまま表示し、ユーザーに25:30に書き直してもらう
                     setTime(`${hh}:${mm}`);
                 } else {
                     setTime(sTime);
@@ -182,23 +185,33 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
 
     const handleSelectProgram = (p: Program) => {
         setTitle(p.title);
-        setTime(p.time);
+        // setTime(p.time);
         setDuration(String(p.duration));
 
-        // If the program starts on the next calendar day (late night broadcast)
-        if (date) {
+        if (isWeekly && selectedDays.length > 0) {
+            // 毎週予約
+            setTime(p.displayTime);
+        }
+        else if (date) {
+            // 単発予約
+            setTime(p.displayTime || p.time);
+
             const progDateStr = p.start.substring(0, 8);
             const currentDateStr = date.toLocaleDateString('sv-SE').replace(/-/g, '');
 
             if (progDateStr > currentDateStr && !isWeekly) {
-                // Parse the next day date
-                const nextDay = new Date(
-                    parseInt(progDateStr.substring(0, 4)),
-                    parseInt(progDateStr.substring(4, 6)) - 1,
-                    parseInt(progDateStr.substring(6, 8))
-                );
-                setDate(nextDay);
+                // Next day check
+                if (!p.displayTime || parseInt(p.displayTime.split(':')[0]) < 24) {
+                    const nextDay = new Date(
+                        parseInt(progDateStr.substring(0, 4)),
+                        parseInt(progDateStr.substring(4, 6)) - 1,
+                        parseInt(progDateStr.substring(6, 8))
+                    );
+                    setDate(nextDay);
+                }
             }
+        } else {
+            setTime(p.displayTime || p.time);
         }
 
         setShowSuggestions(false);
@@ -250,16 +263,25 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
             // メインの曜日の開始時間を計算
             let primaryStartTime: string;
             if (isWeekly) {
-                const today = new Date();
-                const targetDay = primaryDay!;
-                const daysUntil = (targetDay - today.getDay() + 7) % 7 || 7;
-                const nextOccurrence = new Date(today);
-                nextOccurrence.setDate(today.getDate() + daysUntil);
-                const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
-                primaryStartTime = `${dateStr}T${time}`;
+                // Weekly: Send time string directly (e.g. "25:30")
+                primaryStartTime = time;
             } else {
-                const dateStr = date!.toLocaleDateString('sv-SE');
-                primaryStartTime = `${dateStr}T${time}`;
+                // One-time: Normalize to Next Day if >= 24h
+                let targetDate = new Date(date!);
+                const [hStr, mStr] = time.split(':');
+                let h = parseInt(hStr);
+                const m = parseInt(mStr);
+
+                if (h >= 24) {
+                    // 翌日に進める
+                    targetDate.setDate(targetDate.getDate() + 1);
+                    h -= 24;
+                }
+
+                const dateStr = targetDate.toLocaleDateString('sv-SE');
+                const hh = String(h).padStart(2, '0');
+                const mm = String(m).padStart(2, '0');
+                primaryStartTime = `${dateStr}T${hh}:${mm}`;
             }
 
             const primaryPayload = {
@@ -280,18 +302,15 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
 
             if (!res.ok) throw new Error('更新に失敗しました');
 
-            // 2. 追加の曜日があれば、新規予約として作成
+            // 2. 追加の曜日があれば、新規予約として作成 (Edit doesn't usually create new ones unless logic changed, but keeping existing logic)
+            // Note: Edit usually just updates the ID. Multi-day selection in Edit acts like "Update this one, create new for others".
             if (isWeekly && selectedDays.length > 1) {
                 const additionalDays = selectedDays.slice(1);
                 const additionalPayload = [];
 
-                const today = new Date();
                 for (const dayId of additionalDays) {
-                    const daysUntil = (dayId - today.getDay() + 7) % 7 || 7;
-                    const nextOccurrence = new Date(today);
-                    nextOccurrence.setDate(today.getDate() + daysUntil);
-                    const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
-                    const startTime = `${dateStr}T${time}`;
+                    // Start time is just time string for weekly
+                    const startTime = time;
 
                     additionalPayload.push({
                         station_id: stationId,
@@ -315,6 +334,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
 
             router.push('/schedules');
         } catch (error) {
+            console.error(error);
             alert('更新中にエラーが発生しました。');
             setIsLoading(false);
         }
@@ -368,7 +388,6 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                                 onChange={(e) => {
                                     const checked = e.target.checked;
                                     setIsWeekly(checked);
-                                    // 毎週予約をONにした時、すでに日付が設定されていれば、その曜日を初期選択する
                                     if (checked && date && selectedDays.length === 0) {
                                         setSelectedDays([date.getDay()]);
                                     }
@@ -495,10 +514,12 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-600">開始時間</label>
                             <input
-                                type="time"
+                                type="text"
                                 required
                                 value={time}
                                 onChange={(e) => setTime(e.target.value)}
+                                placeholder="例: 25:30, 01:30"
+                                pattern="^([0-2]?[0-9]|3[0-5]):[0-5][0-9]$"
                                 className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-radiko-blue"
                             />
                         </div>
