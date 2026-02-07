@@ -154,22 +154,31 @@ export default function NewSchedulePage() {
         }
         else if (date) {
             // 単発予約のロジック
-            setTime(p.time); // Default to standard time for one-time
+            // displayTimeがあればそれを優先して表示 (例: "25:30")
+            // 無ければ通常の時刻 (例: "01:30")
+            // 文字列としてTime Inputにセットする
+            setTime(p.displayTime || p.time);
 
             const currentDateStr = date.toLocaleDateString('sv-SE').replace(/-/g, '');
             if (progDateStr > currentDateStr && !isWeekly) {
-                // 翌日の日付としてパースして設定
-                const nextDay = new Date(
-                    parseInt(progDateStr.substring(0, 4)),
-                    parseInt(progDateStr.substring(4, 6)) - 1,
-                    parseInt(progDateStr.substring(6, 8))
-                );
-                setDate(nextDay);
-                alert(`※深夜等のため、日付を「${nextDay.toLocaleDateString()}」に変更しました。`);
+                // 通常の時刻比較では翌日だが、Radio Day的には同日深夜かもしれない
+                // ここでは日付を変更せず、時刻のみセットする運用とする
+                // ユーザーがクリックした番組が「翌日」の日付を持っている場合、必要なら日付を更新
+                // ただし displayTime が "25:30" なら日付は当日のままでOK
+                // ※ displayTimeがない、または24時未満の場合は通常の日付更新ロジックを実行
+                if (!p.displayTime || parseInt(p.displayTime.split(':')[0]) < 24) {
+                    const nextDay = new Date(
+                        parseInt(progDateStr.substring(0, 4)),
+                        parseInt(progDateStr.substring(4, 6)) - 1,
+                        parseInt(progDateStr.substring(6, 8))
+                    );
+                    setDate(nextDay);
+                    alert(`※深夜等のため、日付を「${nextDay.toLocaleDateString()}」に変更しました。`);
+                }
             }
         } else {
             // Fallback if no date selected yet (shouldn't happen due to default)
-            setTime(p.time);
+            setTime(p.displayTime || p.time);
         }
         setShowSuggestions(false);
     };
@@ -227,8 +236,24 @@ export default function NewSchedulePage() {
             }
         } else {
             // 単発予約
-            const dateStr = date?.toLocaleDateString('sv-SE');
-            const startTime = `${dateStr}T${time}`;
+            // 入力された時間が 24:00 を超えている場合 (例: 25:30)
+            // 日付を翌日に進めて、時刻を 01:30 に正規化する
+            let targetDate = new Date(date!);
+            const [hStr, mStr] = time.split(':');
+            let h = parseInt(hStr);
+            const m = parseInt(mStr);
+
+            if (h >= 24) {
+                // 翌日に進める
+                targetDate.setDate(targetDate.getDate() + 1);
+                h -= 24;
+            }
+
+            const dateStr = targetDate.toLocaleDateString('sv-SE');
+            // HH:mm 形式にパディング
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const startTime = `${dateStr}T${hh}:${mm}`;
 
             payload.push({
                 station_id: stationId,

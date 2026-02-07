@@ -1,0 +1,28 @@
+{
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/.next/**": true,
+        "**/public/records/**": true,
+        "**/.git/**": true,
+        "**/.git": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/.next": true,
+        "**/public/records": true,
+        "**/.git": true
+    },
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/.next": true,
+        "**/public/records": true,
+        "**/*.db": true,
+        "**/*.sqlite": true,
+        "**/scanner.log": true,
+        "**/.git": true,
+        "**/.DS_Store": true
+    },
+    "git.enabled": false,
+    "git.autorefresh": false,
+    "git.fetchOnPull": false
+}
