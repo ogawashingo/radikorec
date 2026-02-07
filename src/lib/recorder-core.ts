@@ -62,6 +62,10 @@ export class RadikoRecorder {
                 '-headers', headers,
                 '-http_seekable', '0',
                 '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
+                '-multiple_requests', '1', // HTTP keep-alive
+                '-reconnect', '1',
+                '-reconnect_streamed', '1',
+                '-reconnect_delay_max', '5',
                 '-seekable', '0',
                 '-i', fullUrl,
                 '-t', String(durationSec),
@@ -145,6 +149,10 @@ export class RadikoRecorder {
                         '-headers', headers,
                         '-http_seekable', '0',
                         '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
+                        '-multiple_requests', '1', // HTTP keep-alive
+                        '-reconnect', '1',
+                        '-reconnect_streamed', '1',
+                        '-reconnect_delay_max', '5',
                         '-seekable', '0',
                         '-i', fullUrl,
                         '-acodec', 'copy',
