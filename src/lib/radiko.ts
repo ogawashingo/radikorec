@@ -53,9 +53,9 @@ export class RadikoClient {
                         this.areaFree = data.areafree == 1;
                         console.log(`Radiko Premium login successful. AreaFree: ${this.areaFree}`);
                     } catch (parseErr: any) {
-                        // Node.js 20+ specific error handling for closed stream
+                        // Node.js 20+ における閉じたストリームの特定エラー処理
                         if (parseErr.message && parseErr.message.includes('ReadableStream is already closed')) {
-                            console.warn('Suppressing ReadableStream error during login response parsing (known Node.js issue)');
+                            console.warn('ログインレスポンス解析中の ReadableStream エラーを抑制しました (Node.js 既知の問題)');
                         } else {
                             throw parseErr;
                         }
