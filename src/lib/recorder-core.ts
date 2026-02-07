@@ -45,8 +45,8 @@ export class RadikoRecorder {
             const url = new URL(liveStreamUrl);
             url.searchParams.set('station_id', stationId);
             url.searchParams.set('l', '15');
-            url.searchParams.set('lsid', ''); // radi.shに合わせて空にする
-            url.searchParams.set('type', 'c'); // radi.shに合わせて 'c' に変更
+            url.searchParams.set('lsid', lsid); // セッション維持のため lsid を復活 (ランダム生成)
+            url.searchParams.set('type', 'c'); // type=c は維持
 
             const fullUrl = url.toString();
             // radi.sh は User-Agent を curl, wget などに偽装せず FFmpeg デフォルト(Lavf)か、あるいは指定なしかも。
@@ -58,7 +58,7 @@ export class RadikoRecorder {
 
             const ffmpegArgs = [
                 '-nostdin',
-                '-loglevel', 'error',
+                '-loglevel', 'warning', // エラー原因特定のため詳細化
                 '-fflags', '+discardcorrupt',
                 '-headers', headers,
                 '-user_agent', userAgent,
@@ -66,6 +66,7 @@ export class RadikoRecorder {
                 '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
                 '-multiple_requests', '1', // HTTP keep-alive
                 '-reconnect', '1',
+                '-reconnect_at_eof', '1', // ストリーム終了扱いになった場合の再接続
                 '-reconnect_streamed', '1',
                 '-reconnect_delay_max', '5',
                 '-seekable', '0',
