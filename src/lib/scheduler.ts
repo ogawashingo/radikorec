@@ -60,7 +60,6 @@ export function initScheduler() {
         const currentTimeStr = `${hh}:${min}`; // HH:mm for weekly check
         const currentDayOfWeek = jstNow.getDay(); // 0(Sun) - 6(Sat)
 
-        console.log(`Scheduler tick (JST): ${localNowStr} (Day: ${currentDayOfWeek})`);
 
         // 1. ワンタイム予約 (pending かつ 過去)
         const schedules = db.prepare(`
