@@ -7,11 +7,20 @@ const radiko = new RadikoClient();
 import fs from 'fs';
 import path from 'path';
 
-const logFile = path.join(process.cwd(), 'scanner.log');
+const dataDir = path.join(process.cwd(), 'data');
+// Docker環境（dataディレクトリが存在する）なら data/ に、そうでなければカレントディレクトリに保存
+const logFile = fs.existsSync(dataDir)
+    ? path.join(dataDir, 'scanner.log')
+    : path.join(process.cwd(), 'scanner.log');
 
 function log(msg: string) {
     const timestamp = new Date().toISOString();
-    fs.appendFileSync(logFile, `[${timestamp}] ${msg}\n`);
+    try {
+        fs.appendFileSync(logFile, `[${timestamp}] ${msg}\n`);
+    } catch (e) {
+        // コンテナ環境などで書き込み権限がない場合でもプロセスを継続させる
+        console.error(`Failed to write to log file: ${e}`);
+    }
 }
 
 export async function scanAndReserve() {
