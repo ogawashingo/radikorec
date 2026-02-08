@@ -11,6 +11,7 @@ interface Program {
     performer: string;
     description: string;
     status: string;
+    display_time?: string;
 }
 
 interface SearchResultModalProps {
@@ -78,12 +79,32 @@ export function SearchResultModal({
     };
 
     // 日付を見やすくフォーマット
-    const formatDate = (startStr: string, endStr: string) => {
+    const formatDate = (startStr: string, endStr: string, displayTime?: string) => {
         const d = new Date(startStr);
         const e = new Date(endStr);
-        const startTime = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
-        const endTime = `${e.getHours()}:${String(e.getMinutes()).padStart(2, '0')}`;
-        return `${d.getMonth() + 1}/${d.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][d.getDay()]}) ${startTime}-${endTime}`;
+
+        let dateDisplay = d;
+        let startTime = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+        if (displayTime) {
+            startTime = displayTime;
+            const hour = parseInt(displayTime.split(':')[0]);
+            if (hour >= 24) {
+                // 30時間制の場合、表示上の日付は前日にする
+                const adjustedDate = new Date(d);
+                adjustedDate.setDate(d.getDate() - 1);
+                dateDisplay = adjustedDate;
+            }
+        } else if (d.getHours() < 5) {
+            // display_timeがないが深夜の場合も30時間制にする
+            startTime = `${d.getHours() + 24}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const adjustedDate = new Date(d);
+            adjustedDate.setDate(d.getDate() - 1);
+            dateDisplay = adjustedDate;
+        }
+
+        const endTime = `${e.getHours()}:${String(e.getMinutes()).padStart(2, '0')}`; // endはとりあえずそのまま、または必要なら調整
+        return `${dateDisplay.getMonth() + 1}/${dateDisplay.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][dateDisplay.getDay()]}) ${startTime}-${endTime}`;
     };
 
     const getStationName = (id: string) => {
@@ -115,8 +136,8 @@ export function SearchResultModal({
                         <button
                             onClick={() => onFilterChange('future')}
                             className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${currentFilter === 'future'
-                                    ? 'bg-white text-radiko-blue shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
+                                ? 'bg-white text-radiko-blue shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             放送予定 (予約)
@@ -124,8 +145,8 @@ export function SearchResultModal({
                         <button
                             onClick={() => onFilterChange('past')}
                             className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${currentFilter === 'past'
-                                    ? 'bg-white text-radiko-blue shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
+                                ? 'bg-white text-radiko-blue shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             タイムフリー (即DL)
@@ -163,7 +184,7 @@ export function SearchResultModal({
                                                 </span>
                                                 <span className="text-sm font-bold text-radiko-blue flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" />
-                                                    {formatDate(prog.start_time, prog.end_time)}
+                                                    {formatDate(prog.start_time, prog.end_time, prog.display_time)}
                                                 </span>
                                             </div>
                                             <h3 className="font-bold text-slate-800 mb-1 line-clamp-2">{prog.title}</h3>
@@ -199,8 +220,8 @@ export function SearchResultModal({
                             onClick={handleSubmit}
                             disabled={selectedIndices.size === 0 || isProcessing}
                             className={`px-6 py-2.5 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2 ${currentFilter === 'future'
-                                    ? 'bg-radiko-blue hover:bg-blue-600 shadow-blue-200 hover:shadow-blue-300'
-                                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200 hover:shadow-emerald-300'
+                                ? 'bg-radiko-blue hover:bg-blue-600 shadow-blue-200 hover:shadow-blue-300'
+                                : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200 hover:shadow-emerald-300'
                                 }`}
                         >
                             {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}

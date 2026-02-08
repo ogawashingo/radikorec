@@ -18,6 +18,7 @@ export interface Program {
     station_id: string;
     performer: string;
     description: string;
+    display_time?: string; // "25:00"
     status: string; // "past", "now", "future"
 }
 
@@ -148,7 +149,18 @@ export class RadikoClient {
         }
 
         const data: SearchResult = await res.json();
-        return data.data;
+        // Radiko Search API returns start_time_s directly (e.g. "2500")
+        // Mapping it to display_time for frontend
+        const programs = data.data.map(p => {
+            const startTimeS = (p as any).start_time_s;
+            if (startTimeS) {
+                const hour = startTimeS.substring(0, 2);
+                const min = startTimeS.substring(2, 4);
+                p.display_time = `${hour}:${min}`;
+            }
+            return p;
+        });
+        return programs;
     }
 
     async getStreamBaseUrl(stationId: string): Promise<string> {
@@ -306,6 +318,7 @@ export class RadikoClient {
 
                 start_time: this.formatDateForProgram(startObj),
                 end_time: this.formatDateForProgram(endObj),
+                display_time: `${String(displayHours).padStart(2, '0')}:${minutes}`,
                 station_id: stationId,
                 performer: pfmMatch ? this.decodeXml(pfmMatch[1]) : '',
                 description: descMatch ? this.decodeXml(descMatch[1]) : '',

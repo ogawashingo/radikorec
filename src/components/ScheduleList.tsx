@@ -75,7 +75,14 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
                 ) : (
                   <span>{(() => {
                     const d = new Date(schedule.start_time);
-                    return `${d.getMonth() + 1}/${d.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][d.getDay()]}) ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    let displayH = d.getHours();
+                    let displayD = d;
+                    if (displayH < 5) {
+                      displayH += 24;
+                      displayD = new Date(d);
+                      displayD.setDate(d.getDate() - 1);
+                    }
+                    return `${displayD.getMonth() + 1}/${displayD.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][displayD.getDay()]}) ${String(displayH).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                   })()}</span>
                 )}
               </div>

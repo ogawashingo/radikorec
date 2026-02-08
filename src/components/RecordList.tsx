@@ -147,20 +147,25 @@ export function RecordList({ records }: { records: Record[] }) {
                           {getStationLabel(record.station_id)}
                         </span>
                         <span className="mt-0.5 font-medium">{(() => {
-                          // start_time (ISO string) を優先的に使用
                           const timeSource = record.start_time || record.created_at;
                           const d = new Date(timeSource);
 
-                          // ブラウザのロケール設定に関わらず JST で表示するための調整
-                          // Intl.DateTimeFormat を使用するのが確実
-                          return new Intl.DateTimeFormat('ja-JP', {
-                            month: 'numeric',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: false,
-                            timeZone: 'Asia/Tokyo'
-                          }).format(d);
+                          let displayH = d.getHours();
+                          let displayD = d;
+
+                          // 深夜5時前であれば前日の24時以降として表示
+                          if (displayH < 5) {
+                            displayH += 24;
+                            displayD = new Date(d);
+                            displayD.setDate(d.getDate() - 1);
+                          }
+
+                          const month = displayD.getMonth() + 1;
+                          const day = displayD.getDate();
+                          const hours = String(displayH).padStart(2, '0');
+                          const minutes = String(d.getMinutes()).padStart(2, '0');
+
+                          return `${month}/${day} ${hours}:${minutes}`;
                         })()}</span>
                         <span className="hidden sm:inline opacity-30 mt-0.5">•</span>
                         <span className="mt-0.5 font-medium">{
