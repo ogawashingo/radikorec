@@ -111,3 +111,11 @@ pm2 startup
     - PM2: `pm2 logs radikorec`
 - **SQLiteのエラー (手動版)**: `npm install` を実行した環境と実行環境のアーキテクチャが異なると発生します。必ずデプロイ先の環境で `npm install` を行ってください。
 - **ffmpegが見つからない (手動版)**: `PATH` が通っているか確認してください。Docker版ではコンテナ内に同梱されているため問題になりません。
+- **Docker 権限エラー (Permission denied)**: `docker-compose up` 実行時に `permission denied while trying to connect to the Docker daemon socket` と表示される場合、現在のユーザーに Docker 実行権限がありません。以下のいずれかを行ってください。
+    - `sudo docker-compose up -d --build` のように `sudo` を付与する
+    - ユーザーを docker グループに追加する:
+      ```bash
+      sudo usermod -aG docker $USER
+      # 設定反映（要再ログインまたは以下コマンド）
+      newgrp docker
+      ```
