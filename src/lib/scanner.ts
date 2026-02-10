@@ -34,7 +34,7 @@ export async function scanAndReserve() {
     log('Starting keyword scan...');
 
     // 1. 有効なキーワードを取得
-    const keywords = db.prepare('SELECT * FROM keywords WHERE enabled = 1').all() as { id: number, keyword: string }[];
+    const keywords = db.prepare('SELECT * FROM keywords WHERE enabled = 1').all() as { id: number, keyword: string, prevent_duplicates: number }[];
 
     if (keywords.length === 0) {
         log('No enabled keywords found.');
@@ -69,26 +69,28 @@ export async function scanAndReserve() {
                 // セッション内重複チェック用のキー (タイトル + 開始時刻)
                 const sessionKey = `${normalizedTitle}_${startTimeStr}`;
 
-                if (sessionReserved.has(sessionKey)) {
-                    log(`Skipping: already reserved in this session (${prog.title})`);
-                    continue;
-                }
+                if (k.prevent_duplicates) {
+                    if (sessionReserved.has(sessionKey)) {
+                        log(`Skipping: already reserved in this session (${prog.title})`);
+                        continue;
+                    }
 
-                // 重複チェック
-                // 放送局を問わず、タイトル（正規化後）と開始時刻が近い予約が既に存在するか確認
-                // SQLite上での正規化は難しいため、まず時間帯が近いものをすべて取得してJS側で判定する
-                // 誤差5分 (300秒) 以内の予約を取得
-                const candidates = db.prepare(`
-                    SELECT title, start_time 
-                    FROM schedules 
-                    WHERE abs(strftime('%s', start_time) - strftime('%s', ?)) < 300
-                `).all(prog.start_time.replace(' ', 'T')) as { title: string, start_time: string }[];
+                    // 重複チェック
+                    // 放送局を問わず、タイトル（正規化後）と開始時刻が近い予約が既に存在するか確認
+                    // SQLite上での正規化は難しいため、まず時間帯が近いものをすべて取得してJS側で判定する
+                    // 誤差5分 (300秒) 以内の予約を取得
+                    const candidates = db.prepare(`
+                        SELECT title, start_time 
+                        FROM schedules 
+                        WHERE abs(strftime('%s', start_time) - strftime('%s', ?)) < 300
+                    `).all(prog.start_time.replace(' ', 'T')) as { title: string, start_time: string }[];
 
-                const isDuplicate = candidates.some(c => normalizeTitle(c.title || '') === normalizedTitle);
+                    const isDuplicate = candidates.some(c => normalizeTitle(c.title || '') === normalizedTitle);
 
-                if (isDuplicate) {
-                    log(`Skipping duplicate found in DB: ${prog.title} (${prog.station_id})`);
-                    continue;
+                    if (isDuplicate) {
+                        log(`Skipping duplicate found in DB: ${prog.title} (${prog.station_id})`);
+                        continue;
+                    }
                 }
                 console.log(`Reserving: ${prog.title} (${prog.start_time})`);
 

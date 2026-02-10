@@ -10,6 +10,7 @@ interface Keyword {
     id: number;
     keyword: string;
     enabled: number; // 0 or 1
+    prevent_duplicates: number; // 0 or 1
     created_at: string;
 }
 
@@ -89,6 +90,22 @@ export default function KeywordsPage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ enabled: newEnabled })
+            });
+        } catch (error) {
+            fetchKeywords(); // Revert
+        }
+    };
+
+    const togglePreventDuplicates = async (id: number, current: number) => {
+        const newValue = current ? 0 : 1;
+        // 楽観的更新
+        setKeywords(prev => prev.map(k => k.id === id ? { ...k, prevent_duplicates: newValue } : k));
+
+        try {
+            await fetch(`/api/keywords/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prevent_duplicates: newValue })
             });
         } catch (error) {
             fetchKeywords(); // Revert
@@ -324,6 +341,16 @@ export default function KeywordsPage() {
                                 >
                                     {isPreviewLoading && previewKeyword === keyword.keyword ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
                                     確認
+                                </button>
+                                <button
+                                    onClick={() => togglePreventDuplicates(keyword.id, keyword.prevent_duplicates)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${keyword.prevent_duplicates
+                                        ? 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                                        : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                                        }`}
+                                    title={keyword.prevent_duplicates ? '重複を自動で排除します' : '重複をチェックせず全て予約します'}
+                                >
+                                    {keyword.prevent_duplicates ? '重複排除: ON' : '重複排除: OFF'}
                                 </button>
                                 <button
                                     onClick={() => toggleKeyword(keyword.id, keyword.enabled)}

@@ -30,6 +30,7 @@ export async function POST(request: Request) {
             id: result.lastInsertRowid,
             keyword,
             enabled: 1,
+            prevent_duplicates: 1,
             created_at: new Date().toISOString() // Approximate
         });
     } catch (error) {

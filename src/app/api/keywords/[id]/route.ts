@@ -22,10 +22,15 @@ export async function PUT(
 ) {
     const { id } = await params;
     const body = await request.json();
-    const { enabled } = body;
+    const { enabled, prevent_duplicates } = body;
 
     try {
-        db.prepare('UPDATE keywords SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, id);
+        if (enabled !== undefined) {
+            db.prepare('UPDATE keywords SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, id);
+        }
+        if (prevent_duplicates !== undefined) {
+            db.prepare('UPDATE keywords SET prevent_duplicates = ? WHERE id = ?').run(prevent_duplicates ? 1 : 0, id);
+        }
         return NextResponse.json({ success: true });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to update keyword' }, { status: 500 });

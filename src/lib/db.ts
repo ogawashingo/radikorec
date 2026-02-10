@@ -58,6 +58,7 @@ export function initDB() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       keyword TEXT NOT NULL,
       enabled INTEGER DEFAULT 1,
+      prevent_duplicates INTEGER DEFAULT 1,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -81,6 +82,10 @@ export function initDB() {
 
   try {
     db.exec("ALTER TABLE schedules ADD COLUMN is_realtime INTEGER DEFAULT 0");
+  } catch (e) { /* ignore */ }
+
+  try {
+    db.exec("ALTER TABLE keywords ADD COLUMN prevent_duplicates INTEGER DEFAULT 1");
   } catch (e) { /* ignore */ }
 
   try {
