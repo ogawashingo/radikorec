@@ -139,7 +139,6 @@ export class RadikoRecorder {
 
                     const fullUrl = url.toString();
                     console.log(`[Recorder] Chunk ${chunkNo}: ${l}s (${currentSeekStr} - ${currentEndStr})`);
-                    // console.log(`[Debug] URL: ${fullUrl}`);
 
                     const ffmpegArgs = [
                         '-nostdin',
@@ -162,13 +161,28 @@ export class RadikoRecorder {
                         chunkFile
                     ];
 
-                    await this.spawnFfmpeg(ffmpegArgs, `Chunk ${chunkNo}`);
+                    let downloadSuccess = false;
+                    for (let attempt = 1; attempt <= 3; attempt++) {
+                        try {
+                            await this.spawnFfmpeg(ffmpegArgs, `Chunk ${chunkNo} (Attempt ${attempt})`);
+                            if (fs.existsSync(chunkFile)) {
+                                downloadSuccess = true;
+                                break;
+                            }
+                        } catch (err) {
+                            console.warn(`[Recorder] Chunk ${chunkNo} download attempt ${attempt} failed: ${err}`);
+                            if (attempt < 3) {
+                                // 5秒待機してリトライ
+                                await new Promise(resolve => setTimeout(resolve, 5000));
+                            }
+                        }
+                    }
 
-                    if (fs.existsSync(chunkFile)) {
+                    if (downloadSuccess) {
                         chunkFiles.push(chunkFile);
                         fs.appendFileSync(fileListPath, `file '${chunkFile}'\n`);
                     } else {
-                        throw new Error(`Chunk download failed: ${chunkFile}`);
+                        throw new Error(`Chunk download failed after 3 attempts: ${chunkFile}`);
                     }
 
                     leftSec -= l;

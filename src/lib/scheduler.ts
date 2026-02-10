@@ -128,7 +128,7 @@ export function initScheduler() {
                 .then((res: any) => {
                     console.log(`Schedule completed: ${s.id}`);
                     if (!s.recurring_pattern) {
-                        db.prepare("UPDATE schedules SET status = 'completed' WHERE id = ?").run(s.id);
+                        db.prepare("UPDATE schedules SET status = 'completed', retry_count = 0 WHERE id = ?").run(s.id);
                     }
 
                     // Discord通知を送信
@@ -140,27 +140,44 @@ export function initScheduler() {
                             { name: 'サイズ', value: formatFileSize(res.size || 0), inline: true },
                             { name: '録音時間', value: `${s.duration}分`, inline: true }
                         ],
-                        timestamp: new Date().toISOString() // Discord expects ISO in field, but we'll use actual JST in description if needed
+                        timestamp: new Date().toISOString()
                     });
                 })
                 .catch(err => {
                     console.error('Recording error:', err);
                     const errorMsg = err instanceof Error ? err.message : String(err);
+
                     if (!s.recurring_pattern) {
-                        db.prepare("UPDATE schedules SET status = 'failed', error_message = ? WHERE id = ?")
-                            .run(errorMsg, s.id);
+                        const newRetryCount = (s as any).retry_count + 1;
+                        if (newRetryCount <= 3) {
+                            console.log(`Rescheduling ${s.id} for retry ${newRetryCount}...`);
+                            db.prepare("UPDATE schedules SET status = 'pending', retry_count = ?, error_message = ? WHERE id = ?")
+                                .run(newRetryCount, `Retry ${newRetryCount}: ${errorMsg}`, s.id);
+                        } else {
+                            db.prepare("UPDATE schedules SET status = 'failed', error_message = ? WHERE id = ?")
+                                .run(errorMsg, s.id);
+                        }
+                    } else {
+                        // Weekly doesn't use retry_count for rescheduling yet to avoid complexity
+                        // Just log the error
+                        // But we can update the error message
+                        db.prepare("UPDATE schedules SET error_message = ? WHERE id = ?")
+                            .run(`Last attempt failed: ${errorMsg}`, s.id);
                     }
 
-                    // Discord通知を送信
-                    sendDiscordNotification(`❌ 録音失敗: ${s.title || s.station_id}`, {
+                    // Discord通知を送信 (リトライ中は送信しないか、リトライ中であることを明示する)
+                    const isRetrying = !s.recurring_pattern && ((s as any).retry_count + 1 <= 3);
+                    const statusText = isRetrying ? `⚠️ 録音再試行中 (${(s as any).retry_count + 1}/3)` : `❌ 録音失敗`;
+
+                    sendDiscordNotification(`${statusText}: ${s.title || s.station_id}`, {
                         title: s.title || '無題の番組',
-                        color: 0xff0000, // Red
+                        color: isRetrying ? 0xffa500 : 0xff0000, // Orange or Red
                         description: `エラー内容: \`\`\`${errorMsg}\`\`\``,
                         fields: [
                             { name: '放送局', value: s.station_id, inline: true },
                             { name: '録音時間', value: `${s.duration}分`, inline: true }
                         ],
-                        timestamp: new Date().toISOString() // Discord expects ISO in field, but we'll use actual JST in description if needed
+                        timestamp: new Date().toISOString()
                     });
                 });
 

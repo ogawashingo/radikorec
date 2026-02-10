@@ -91,6 +91,10 @@ export function initDB() {
   try {
     db.exec("ALTER TABLE records ADD COLUMN is_watched INTEGER DEFAULT 0");
   } catch (e) { /* ignore */ }
+
+  try {
+    db.exec("ALTER TABLE schedules ADD COLUMN retry_count INTEGER DEFAULT 0");
+  } catch (e) { /* ignore */ }
 }
 
 // インポート時に初期化を実行 (ホットリロード時は注意が必要だが、IF NOT EXISTS なら無害)
