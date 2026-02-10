@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import crypto from 'crypto';
 import { RadikoClient } from './radiko';
+import { logger } from './logger';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -31,7 +32,7 @@ export class RadikoRecorder {
      * ffmpegを使用して番組を録音する
      */
     async record(stationId: string, startTime: Date, durationMin: number, outputPath: string, isRealtime: boolean = false): Promise<void> {
-        console.log(`[Recorder] 録音を開始します: ${stationId} (リアルタイム: ${isRealtime})`);
+        logger.info({ stationId, isRealtime }, 'Starting recording');
 
         // 1. 認証 (エリアIDと認証トークンの取得)
         const auth = await this.client.getAuthToken();
@@ -104,7 +105,7 @@ export class RadikoRecorder {
             fs.writeFileSync(fileListPath, '');
 
             try {
-                console.log(`[Recorder] タイムフリー分割ダウンロード開始 (総時間: ${durationSec}秒)`);
+                logger.info({ stationId, durationSec }, 'Starting timefree chunk download');
 
                 while (leftSec > 0) {
                     const chunkFile = path.join(tmpDir, `${tmpFileBase}_${chunkNo}.m4a`);
@@ -138,7 +139,7 @@ export class RadikoRecorder {
                     url.searchParams.set('type', 'c');
 
                     const fullUrl = url.toString();
-                    console.log(`[Recorder] Chunk ${chunkNo}: ${l}s (${currentSeekStr} - ${currentEndStr})`);
+                    logger.debug({ chunkNo, l, currentSeekStr, currentEndStr }, 'Downloading chunk');
 
                     const ffmpegArgs = [
                         '-nostdin',

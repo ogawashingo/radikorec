@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { logger } from '@/lib/logger';
 
 const AUTH_KEY = 'bcd151073c03b352e1ef2fd66c32209da9ca0afa';
 
@@ -124,7 +125,7 @@ export class RadikoClient {
         this.authToken = token;
         this.areaId = areaId;
 
-        console.log(`Radiko Auth success. Area: ${areaId}`);
+        logger.info({ areaId }, 'Radiko Auth success');
 
         return { authtoken: token, area_id: areaId };
     }
@@ -187,7 +188,7 @@ export class RadikoClient {
         // フォールバック: timefree="1" なら何でも
         const fallback = urls.find((u: any) => u['@_timefree'] === '1');
         if (fallback?.playlist_create_url) {
-            console.warn(`${stationId} の厳密な areafree マッチに失敗しました。任意の timefree URL にフォールバックします。`);
+            logger.warn({ stationId }, 'Strict areafree match failed, falling back to any timefree URL');
             return fallback.playlist_create_url;
         }
 

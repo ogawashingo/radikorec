@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { RadikoRecorder } from '@/lib/recorder-core';
+import { logger } from '@/lib/logger';
 import path from 'path';
 import fs from 'fs';
 
@@ -18,7 +19,7 @@ export async function recordRadiko(stationId: string, durationMin: number, title
         if (startTime) {
             startTimeDate = new Date(startTime);
             if (isNaN(startTimeDate.getTime())) {
-                console.warn(`無効な開始時刻: ${startTime}, 現在時刻を使用します。`);
+                logger.warn({ startTime }, 'Invalid start time, using current time');
                 startTimeDate = now;
             }
         } else {
@@ -49,7 +50,7 @@ export async function recordRadiko(stationId: string, durationMin: number, title
             await recorder.record(stationId, startTimeDate, durationMin, outputPath, isRealtime);
 
             // 録音完了後の処理 (DB保存など)
-            console.log(`録音完了: ${filename}`);
+            logger.info({ filename }, 'Recording completed');
 
             if (!fs.existsSync(outputPath)) {
                 throw new Error('録音後に出力ファイルが見つかりません');

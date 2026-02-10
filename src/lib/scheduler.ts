@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { recordRadiko } from '@/lib/recorder';
 import { sendDiscordNotification, formatFileSize } from '@/lib/notifier';
 import { scanAndReserve } from '@/lib/scanner';
+import { logger } from '@/lib/logger';
 
 // 開発中の重複初期化を防ぐためのグローバル参照
 let isSchedulerRunning = false;
@@ -26,7 +27,7 @@ export function initScheduler() {
         return;
     }
 
-    console.log('Starting Scheduler...');
+    logger.info('Starting Scheduler...');
     isSchedulerRunning = true;
 
     // 毎日のキーワードスキャン (04:00 JST)
@@ -100,7 +101,7 @@ export function initScheduler() {
         }
 
         for (const s of targets) {
-            console.log(`Triggering schedule: ${s.title} (${s.station_id})`);
+            logger.info({ title: s.title, stationId: s.station_id }, 'Triggering schedule');
 
             // ワンタイムの場合はステータス更新
             if (!s.recurring_pattern) {

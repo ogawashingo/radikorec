@@ -1,27 +1,9 @@
 import { db } from '@/lib/db';
 import { RadikoClient } from '@/lib/radiko';
 import { sendDiscordNotification } from '@/lib/notifier';
+import { logger } from '@/lib/logger';
 
 const radiko = new RadikoClient();
-
-import fs from 'fs';
-import path from 'path';
-
-const dataDir = path.join(process.cwd(), 'data');
-// Docker環境（dataディレクトリが存在する）なら data/ に、そうでなければカレントディレクトリに保存
-const logFile = fs.existsSync(dataDir)
-    ? path.join(dataDir, 'scanner.log')
-    : path.join(process.cwd(), 'scanner.log');
-
-function log(msg: string) {
-    const timestamp = new Date().toISOString();
-    try {
-        fs.appendFileSync(logFile, `[${timestamp}] ${msg}\n`);
-    } catch (e) {
-        // コンテナ環境などで書き込み権限がない場合でもプロセスを継続させる
-        console.error(`Failed to write to log file: ${e}`);
-    }
-}
 
 /**
  * 番組タイトルの正規化（現在は前後空白の削除のみ）
@@ -31,13 +13,13 @@ function normalizeTitle(title: string): string {
 }
 
 export async function scanAndReserve() {
-    log('Starting keyword scan...');
+    logger.info('Starting keyword scan...');
 
     // 1. 有効なキーワードを取得
     const keywords = db.prepare('SELECT * FROM keywords WHERE enabled = 1').all() as { id: number, keyword: string, prevent_duplicates: number }[];
 
     if (keywords.length === 0) {
-        log('No enabled keywords found.');
+        logger.info('No enabled keywords found.');
         return;
     }
 
@@ -47,22 +29,22 @@ export async function scanAndReserve() {
 
     for (const k of keywords) {
         try {
-            log(`Searching for keyword: ${k.keyword}`);
+            logger.debug({ keyword: k.keyword }, 'Searching for keyword');
 
             // レート制限: 1-3秒待機
             const delay = 1000 + Math.random() * 2000;
             await new Promise(r => setTimeout(r, delay));
 
             const programs = await radiko.search(k.keyword);
-            log(`Found ${programs.length} programs from API.`);
+            logger.info({ keyword: k.keyword, count: programs.length }, 'Found programs from API');
 
             // フィルタ: 未来の番組（または現在放送中）のみ
             const now = new Date();
             const futurePrograms = programs.filter(p => new Date(p.end_time) > now);
-            log(`Future/Current programs: ${futurePrograms.length}`);
+            logger.info({ count: futurePrograms.length }, 'Future/Current programs');
 
             for (const prog of futurePrograms) {
-                log(`Processing: ${prog.title} at ${prog.start_time}`);
+                logger.debug({ title: prog.title, startTime: prog.start_time }, 'Processing program');
 
                 const normalizedTitle = normalizeTitle(prog.title);
                 const startTimeStr = prog.start_time.replace(' ', 'T');
@@ -71,7 +53,7 @@ export async function scanAndReserve() {
 
                 if (k.prevent_duplicates) {
                     if (sessionReserved.has(sessionKey)) {
-                        log(`Skipping: already reserved in this session (${prog.title})`);
+                        logger.debug({ title: prog.title }, 'Skipping: already reserved in this session');
                         continue;
                     }
 
@@ -88,11 +70,11 @@ export async function scanAndReserve() {
                     const isDuplicate = candidates.some(c => normalizeTitle(c.title || '') === normalizedTitle);
 
                     if (isDuplicate) {
-                        log(`Skipping duplicate found in DB: ${prog.title} (${prog.station_id})`);
+                        logger.debug({ title: prog.title, stationId: prog.station_id }, 'Skipping duplicate found in DB');
                         continue;
                     }
                 }
-                console.log(`Reserving: ${prog.title} (${prog.start_time})`);
+                logger.info({ title: prog.title, startTime: prog.start_time }, 'Reserving program');
 
                 // 表示時間の計算
                 // prog.start_time は "2026-02-02 18:50:00" 形式
@@ -116,12 +98,11 @@ export async function scanAndReserve() {
                 sessionReserved.add(sessionKey);
             }
         } catch (e) {
-            log(`Error processing keyword ${k.keyword}: ${e}`);
-            console.error(`Error processing keyword ${k.keyword}:`, e);
+            logger.error({ keyword: k.keyword, error: e }, 'Error processing keyword');
         }
     }
 
-    console.log(`Scan complete. Reserved ${reservedCount} programs.`);
+    logger.info({ reservedCount }, 'Scan complete');
 
     if (reservedCount > 0) {
         await sendDiscordNotification(`[キーワード自動予約] ${reservedCount} 件の番組を予約しました。`);

@@ -4,6 +4,7 @@ import { Schedule, Record } from '@/types'; // Need to define types
 import { Plus, Clock, Disc } from 'lucide-react';
 import { ScheduleList } from '@/components/ScheduleList';
 import { RecordList } from '@/components/RecordList';
+import { LogViewer } from '@/components/LogViewer';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data
 
@@ -76,6 +77,12 @@ export default function Home() {
           </div>
           <RecordList records={records} />
         </div>
+      </div>
+
+      {/* System Logs */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-slate-800 px-1">システムログ</h2>
+        <LogViewer />
       </div>
     </div>
   );
