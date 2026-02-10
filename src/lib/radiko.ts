@@ -300,15 +300,25 @@ export class RadikoClient {
         const xml = await res.text();
         const jsonObj = this.parser.parse(xml);
 
-        // XML structure: stations > station
-        const stationNodes = Array.isArray(jsonObj.stations?.station)
-            ? jsonObj.stations.station
-            : [jsonObj.stations?.station].filter(Boolean);
+        // XML structure: region > stations[] > station[]
+        const regionNodes = Array.isArray(jsonObj.region?.stations)
+            ? jsonObj.region.stations
+            : [jsonObj.region?.stations].filter(Boolean);
 
-        const stations: { id: string, name: string }[] = stationNodes.map((s: any) => ({
-            id: String(s.id),
-            name: String(s.name)
-        }));
+        const stations: { id: string, name: string }[] = [];
+
+        for (const region of regionNodes) {
+            const stationNodes = Array.isArray(region.station)
+                ? region.station
+                : [region.station].filter(Boolean);
+
+            for (const s of stationNodes) {
+                stations.push({
+                    id: String(s.id),
+                    name: String(s.name)
+                });
+            }
+        }
 
         return stations;
     }
