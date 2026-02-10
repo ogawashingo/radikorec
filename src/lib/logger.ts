@@ -17,41 +17,42 @@ const logFile = fs.existsSync(dataDir)
     ? path.join(dataDir, 'app.log')
     : path.join(process.cwd(), 'app.log');
 
-const targets: any[] = [
-    {
-        target: 'pino/file',
-        options: { destination: logFile },
-        level: 'info'
+function createLogger() {
+    if (isDev) {
+        const transport = pino.transport({
+            targets: [
+                {
+                    target: 'pino/file',
+                    options: { destination: logFile },
+                    level: 'info'
+                },
+                {
+                    target: 'pino-pretty',
+                    options: {
+                        colorize: true,
+                        ignore: 'pid,hostname',
+                        translateTime: 'SYS:standard'
+                    },
+                    level: 'debug'
+                }
+            ]
+        });
+        return pino({ level: 'debug' }, transport);
+    } else {
+        // Production: Use multistream to avoid worker_threads/dynamic loading issues
+        // in Next.js standalone mode.
+        const streams = [
+            { stream: process.stdout, level: 'info' as const },
+            { stream: fs.createWriteStream(logFile, { flags: 'a' }), level: 'info' as const }
+        ];
+        return pino(
+            {
+                level: 'info',
+                base: { env: 'production' }
+            },
+            pino.multistream(streams)
+        );
     }
-];
-
-if (isDev) {
-    targets.push({
-        target: 'pino-pretty',
-        options: {
-            colorize: true,
-            ignore: 'pid,hostname',
-            translateTime: 'SYS:standard'
-        },
-        level: 'debug'
-    });
-} else {
-    // In production, we output JSON to stdout
-    targets.push({
-        target: 'pino/file',
-        options: { destination: 1 }, // 1 is stdout
-        level: 'info'
-    });
 }
 
-const transport = pino.transport({ targets });
-
-export const logger = pino(
-    {
-        level: isDev ? 'debug' : 'info',
-        base: {
-            env: process.env.NODE_ENV
-        }
-    },
-    transport
-);
+export const logger = createLogger();
