@@ -2,6 +2,11 @@ import pino from 'pino';
 import path from 'path';
 import fs from 'fs';
 
+// Force Next.js standalone to include these modules by using them or importing them
+// In production, pino-abstract-transport is needed by pino internally even if not using workers sometimes,
+// or at least it must be present for the worker thread file to be happy if it's accidentally required.
+import 'pino-abstract-transport';
+
 const isDev = process.env.NODE_ENV === 'development';
 
 const dataDir = path.join(process.cwd(), 'data');
@@ -19,6 +24,7 @@ const logFile = fs.existsSync(dataDir)
 
 function createLogger() {
     if (isDev) {
+        // Use pino-pretty in development
         const transport = pino.transport({
             targets: [
                 {
@@ -39,8 +45,7 @@ function createLogger() {
         });
         return pino({ level: 'debug' }, transport);
     } else {
-        // Production: Use multistream to avoid worker_threads/dynamic loading issues
-        // in Next.js standalone mode.
+        // Production: Strictly avoid worker threads by using multistream
         const streams = [
             { stream: process.stdout, level: 'info' as const },
             { stream: fs.createWriteStream(logFile, { flags: 'a' }), level: 'info' as const }
