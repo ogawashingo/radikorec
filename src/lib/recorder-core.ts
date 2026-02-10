@@ -49,12 +49,9 @@ export class RadikoRecorder {
             url.searchParams.set('type', 'c'); // type=c は維持
 
             const fullUrl = url.toString();
-            // radi.sh は User-Agent を curl, wget などに偽装せず FFmpeg デフォルト(Lavf)か、あるいは指定なしかも。
-            // しかしここでは安全のため curl にしておく
-            const userAgent = 'curl/7.52.1';
-
-            // radi.sh は AuthToken のみ送信している
-            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\n`;
+            // ライブ録画でもエリア認証が必要な場合があるため ID を追加
+            const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\n`;
 
             const ffmpegArgs = [
                 '-nostdin',

@@ -92,6 +92,32 @@ export function RecordList({ records }: { records: Record[] }) {
     return currentRecord?.id === record.id && isPlaying;
   };
 
+  const toggleWatched = async (record: Record) => {
+    const newStatus = record.is_watched ? 0 : 1;
+
+    // 楽観的更新
+    setOptimisticRecords(prev => prev.map(r =>
+      r.filename === record.filename ? { ...r, is_watched: newStatus } : r
+    ));
+
+    try {
+      const res = await fetch(`/api/records/${record.filename}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_watched: newStatus })
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      // 元に戻す
+      setOptimisticRecords(prev => prev.map(r =>
+        r.filename === record.filename ? { ...r, is_watched: record.is_watched } : r
+      ));
+      alert('視聴状態の更新に失敗しました');
+    }
+  };
+
 
   if (optimisticRecords.length === 0) {
     return <div className="text-slate-500 text-sm">録音ファイルは見つかりませんでした。</div>;
@@ -139,8 +165,15 @@ export function RecordList({ records }: { records: Record[] }) {
                     </button>
 
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-slate-800 break-words line-clamp-2 md:line-clamp-1">
-                        {record.filename}
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-bold text-slate-800 break-words line-clamp-2 md:line-clamp-1">
+                          {record.filename}
+                        </div>
+                        {record.is_watched === 0 && (
+                          <span className="shrink-0 bg-red-100 text-red-600 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-red-200 uppercase tracking-wider">
+                            NEW
+                          </span>
+                        )}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 font-bold">
                         <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase border border-slate-200">
@@ -177,6 +210,21 @@ export function RecordList({ records }: { records: Record[] }) {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 w-full sm:w-auto justify-end border-t border-slate-100 sm:border-0 pt-2 sm:pt-0">
+                    <button
+                      onClick={() => toggleWatched(record)}
+                      className={twMerge(
+                        "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border flex items-center justify-center gap-1.5",
+                        record.is_watched
+                          ? "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                          : "bg-blue-50 text-radiko-blue border-blue-100 hover:bg-blue-100"
+                      )}
+                    >
+                      <div className={twMerge(
+                        "w-2 h-2 rounded-full",
+                        record.is_watched ? "bg-slate-300" : "bg-radiko-blue animate-pulse"
+                      )} />
+                      {record.is_watched ? '視聴済み' : '未視聴'}
+                    </button>
                     <a
                       href={`/api/records/${record.filename}?download=true`}
                       download

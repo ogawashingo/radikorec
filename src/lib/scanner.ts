@@ -23,6 +23,13 @@ function log(msg: string) {
     }
 }
 
+/**
+ * 番組タイトルの正規化（現在は前後空白の削除のみ）
+ */
+function normalizeTitle(title: string): string {
+    return title.trim();
+}
+
 export async function scanAndReserve() {
     log('Starting keyword scan...');
 
@@ -35,6 +42,8 @@ export async function scanAndReserve() {
     }
 
     let reservedCount = 0;
+    // 同一スキャンセッション内での重複予約を防止するためのセット
+    const sessionReserved = new Set<string>();
 
     for (const k of keywords) {
         try {
@@ -54,51 +63,56 @@ export async function scanAndReserve() {
 
             for (const prog of futurePrograms) {
                 log(`Processing: ${prog.title} at ${prog.start_time}`);
+
+                const normalizedTitle = normalizeTitle(prog.title);
+                const startTimeStr = prog.start_time.replace(' ', 'T');
+                // セッション内重複チェック用のキー (タイトル + 開始時刻)
+                const sessionKey = `${normalizedTitle}_${startTimeStr}`;
+
+                if (sessionReserved.has(sessionKey)) {
+                    log(`Skipping: already reserved in this session (${prog.title})`);
+                    continue;
+                }
+
                 // 重複チェック
-                // フォーマット変換: "2026-02-02 12:00:00" -> "2026-02-02T12:00"
-                // DBは通常ISO形式で保存。比較のためISO形式に統一する
-                // APIは "YYYY-MM-DD HH:mm:ss" を送信
-                // 手動予約は "YYYY-MM-DDTHH:mm" を使用
-                // API時刻をISO形式 "YYYY-MM-DDTHH:mm:ss" に変換
+                // 放送局を問わず、タイトル（正規化後）と開始時刻が近い予約が既に存在するか確認
+                // SQLite上での正規化は難しいため、まず時間帯が近いものをすべて取得してJS側で判定する
+                // 誤差5分 (300秒) 以内の予約を取得
+                const candidates = db.prepare(`
+                    SELECT title, start_time 
+                    FROM schedules 
+                    WHERE abs(strftime('%s', start_time) - strftime('%s', ?)) < 300
+                `).all(prog.start_time.replace(' ', 'T')) as { title: string, start_time: string }[];
 
-                const startTimeDate = new Date(prog.start_time);
-                // シンプルな重複チェック: station_id + start_time (概算)
-                // 手動入力の差異を許容する柔軟な範囲チェックを使用
-                // DBクエリに依存
+                const isDuplicate = candidates.some(c => normalizeTitle(c.title || '') === normalizedTitle);
 
-                // SQLiteはデフォルトで良い日付関数を持たないため、JSで処理
-                // この放送局でこの時間前後(±2分)に予約が存在するかチェック
-                const existing = db.prepare("SELECT id FROM schedules WHERE station_id = ? AND date(start_time) = date(?) AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 120").get(
-                    prog.station_id,
-                    prog.start_time,
-                    prog.start_time
-                );
+                if (isDuplicate) {
+                    log(`Skipping duplicate found in DB: ${prog.title} (${prog.station_id})`);
+                    continue;
+                }
+                console.log(`Reserving: ${prog.title} (${prog.start_time})`);
 
-                if (!existing) {
-                    console.log(`Reserving: ${prog.title} (${prog.start_time})`);
+                // 表示時間の計算
+                // prog.start_time は "2026-02-02 18:50:00" 形式
+                // 録音時間が必要。API結果にはend_timeがある
+                const start = new Date(prog.start_time);
+                const end = new Date(prog.end_time);
+                const duration = Math.round((end.getTime() - start.getTime()) / 60000); // minutes
 
-                    // 表示時間の計算
-                    // prog.start_time は "2026-02-02 18:50:00" 形式
-                    // 録音時間が必要。API結果にはend_timeがある
-                    const start = new Date(prog.start_time);
-                    const end = new Date(prog.end_time);
-                    const duration = Math.round((end.getTime() - start.getTime()) / 60000); // minutes
-
-                    // 挿入
-                    db.prepare(`
+                // 挿入
+                db.prepare(`
                         INSERT INTO schedules (station_id, start_time, duration, title, status)
                         VALUES (?, ?, ?, ?, 'pending')
                     `).run(
-                        prog.station_id,
-                        prog.start_time.replace(' ', 'T'), // Normalize to ISO-ish
-                        duration,
-                        prog.title
-                    );
+                    prog.station_id,
+                    prog.start_time.replace(' ', 'T'), // Normalize to ISO-ish
+                    duration,
+                    prog.title
+                );
 
-                    reservedCount++;
-                }
+                reservedCount++;
+                sessionReserved.add(sessionKey);
             }
-
         } catch (e) {
             log(`Error processing keyword ${k.keyword}: ${e}`);
             console.error(`Error processing keyword ${k.keyword}:`, e);

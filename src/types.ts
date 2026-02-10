@@ -21,5 +21,6 @@ export interface Record {
     duration: number;
     file_path: string;
     size: number;
+    is_watched: number; // 0 or 1
     created_at: string;
 }

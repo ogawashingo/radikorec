@@ -91,3 +91,29 @@ export async function DELETE(
         return NextResponse.json({ error: 'Failed to delete record' }, { status: 500 });
     }
 }
+
+export async function PATCH(
+    request: Request,
+    { params }: { params: Promise<{ filename: string }> }
+) {
+    try {
+        const { filename } = await params;
+        const { is_watched } = await request.json();
+
+        if (typeof is_watched !== 'number') {
+            return NextResponse.json({ error: 'is_watched must be a number (0 or 1)' }, { status: 400 });
+        }
+
+        const stmt = db.prepare('UPDATE records SET is_watched = ? WHERE filename = ?');
+        const result = stmt.run(is_watched, filename);
+
+        if (result.changes === 0) {
+            return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Error updating record:', error);
+        return NextResponse.json({ error: 'Failed to update record' }, { status: 500 });
+    }
+}

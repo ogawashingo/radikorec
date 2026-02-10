@@ -43,6 +43,7 @@ describe('RadikoClient', () => {
                 title: 'Test Program',
                 start_time: '2024-02-01 12:00:00', // Formatted
                 end_time: '2024-02-01 13:00:00',   // Formatted
+                display_time: '12:00',
                 station_id: 'TBS',
                 performer: 'Test Performer',
                 description: 'Test Description',

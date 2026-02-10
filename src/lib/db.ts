@@ -50,6 +50,7 @@ export function initDB() {
       duration INTEGER,
       file_path TEXT,
       size INTEGER,
+      is_watched INTEGER DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -80,6 +81,10 @@ export function initDB() {
 
   try {
     db.exec("ALTER TABLE schedules ADD COLUMN is_realtime INTEGER DEFAULT 0");
+  } catch (e) { /* ignore */ }
+
+  try {
+    db.exec("ALTER TABLE records ADD COLUMN is_watched INTEGER DEFAULT 0");
   } catch (e) { /* ignore */ }
 }
 
