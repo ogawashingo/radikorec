@@ -46,7 +46,7 @@ docker-compose up -d --build
 ### 4. データの永続化
 以下のファイル/ディレクトリがホスト側にマッピングされ、データが保持されます。
 - `records/`: 録音ファイル
-- `radikorec.db`: データベースファイル
+- `data/`: データベース (`radikorec.db`) およびログファイル
 - `.env`: 環境変数設定
 
 ### 5. 管理コマンド
@@ -87,7 +87,11 @@ npm run build
 ### 3. 環境設定
 プロジェクトルートに `.env` ファイルを作成します（内容はDocker版と同じ）。
 
-### 4. 起動 (PM2推奨)
+### 4. ディレクトリ権限の設定
+アプリケーションが `data/` ディレクトリ（DB・ログ用）と `public/records/` ディレクトリ（録音データ用）を自動作成・書き込みします。
+実行ユーザーがこれらのディレクトリに書き込めるように権限を設定してください。
+
+### 5. 起動 (PM2推奨)
 OS再起動時も自動起動するように `pm2` の使用を推奨します。
 
 ```bash
@@ -106,9 +110,13 @@ pm2 startup
 
 ## トラブルシューティング
 
-- **録音が始まらない**: ログを確認してください。
+- **録音が始まらない / キーワード予約が動かない**: ログを確認してください。
     - Docker: `docker-compose logs -f`
     - PM2: `pm2 logs radikorec`
+    - ログファイル: `data/app.log` (存在する場合)
+- **時刻がずれる**: 
+    - Docker版は自動的に `Asia/Tokyo` (JST) に設定されます。
+    - 手動版の場合は、サーバーのタイムゾーンが JST に設定されているか確認してください (`timedatectl` 等)。
 - **SQLiteのエラー (手動版)**: `npm install` を実行した環境と実行環境のアーキテクチャが異なると発生します。必ずデプロイ先の環境で `npm install` を行ってください。
 - **ffmpegが見つからない (手動版)**: `PATH` が通っているか確認してください。Docker版ではコンテナ内に同梱されているため問題になりません。
 - **Docker 権限エラー (Permission denied)**: `docker-compose up` 実行時に `permission denied while trying to connect to the Docker daemon socket` と表示される場合、現在のユーザーに Docker 実行権限がありません。以下のいずれかを行ってください。
