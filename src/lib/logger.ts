@@ -17,24 +17,34 @@ const logFile = fs.existsSync(dataDir)
     ? path.join(dataDir, 'app.log')
     : path.join(process.cwd(), 'app.log');
 
-const transport = pino.transport({
-    targets: [
-        {
-            target: 'pino/file',
-            options: { destination: logFile },
-            level: 'info'
+const targets: any[] = [
+    {
+        target: 'pino/file',
+        options: { destination: logFile },
+        level: 'info'
+    }
+];
+
+if (isDev) {
+    targets.push({
+        target: 'pino-pretty',
+        options: {
+            colorize: true,
+            ignore: 'pid,hostname',
+            translateTime: 'SYS:standard'
         },
-        {
-            target: 'pino-pretty',
-            options: {
-                colorize: true,
-                ignore: 'pid,hostname',
-                translateTime: 'SYS:standard'
-            },
-            level: isDev ? 'debug' : 'info'
-        }
-    ]
-});
+        level: 'debug'
+    });
+} else {
+    // In production, we output JSON to stdout
+    targets.push({
+        target: 'pino/file',
+        options: { destination: 1 }, // 1 is stdout
+        level: 'info'
+    });
+}
+
+const transport = pino.transport({ targets });
 
 export const logger = pino(
     {
