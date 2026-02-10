@@ -59,13 +59,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # pino は内部で worker_threads を使用し、動的にモジュールを読み込むため、
 # Next.js の standalone トレーサーでは依存関係が正しくコピーされない。
 # 必要なモジュールを builder ステージから明示的にコピーする。
+# ※ pino-abstract-transport は pino/node_modules/ 内にネストされているため、
+#    pino ディレクトリのコピーに含まれる。
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pino ./node_modules/pino
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pino-abstract-transport ./node_modules/pino-abstract-transport
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pino-pretty ./node_modules/pino-pretty
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/thread-stream ./node_modules/thread-stream
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/sonic-boom ./node_modules/sonic-boom
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/atomic-sleep ./node_modules/atomic-sleep
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/fast-redact ./node_modules/fast-redact
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/on-exit-leak-free ./node_modules/on-exit-leak-free
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/quick-format-unescaped ./node_modules/quick-format-unescaped
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/real-require ./node_modules/real-require
