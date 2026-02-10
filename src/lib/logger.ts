@@ -1,20 +1,57 @@
 import pino from 'pino';
-
-// Node.js v20+ / Next.js standalone 環境での Worker エラーを回避するため、
-// ロギングを極限までシンプルにします。
+import path from 'path';
+import fs from 'fs';
 
 const isDev = process.env.NODE_ENV === 'development';
 
-function createLogger() {
-    if (isDev) {
-        // 開発環境: 本番環境でのエラー切り分けのため、一時的に標準構成にします。
-        return pino({ level: 'debug' });
-    } else {
-        // 本番環境: デバッグメッセージを直接標準出力に出して、このコードが呼ばれているか確認します。
-        process.stdout.write("--- [DEBUG] LOGGER INITIALIZING (MINIMAL MODE) ---\n");
-        // 最も基本的な構成。これでエラーが出る場合は pino ライブラリ側の問題です。
-        return pino({ level: 'info' });
+const dataDir = path.join(process.cwd(), 'data');
+if (!fs.existsSync(dataDir)) {
+    try {
+        fs.mkdirSync(dataDir, { recursive: true });
+    } catch (e) {
+        // ディレクトリ作成に失敗しても処理は続行
     }
 }
 
-export const logger = createLogger();
+const logFile = fs.existsSync(dataDir)
+    ? path.join(dataDir, 'app.log')
+    : path.join(process.cwd(), 'app.log');
+
+// serverExternalPackages により pino 関連パッケージはバンドル対象外となるため、
+// pino.transport (Worker) を安全に使用できます。
+const transport = pino.transport({
+    targets: [
+        {
+            target: 'pino/file',
+            options: { destination: logFile },
+            level: 'info'
+        },
+        ...(isDev
+            ? [{
+                target: 'pino-pretty',
+                options: {
+                    colorize: true,
+                    ignore: 'pid,hostname',
+                    translateTime: 'SYS:standard'
+                },
+                level: 'debug' as const
+            }]
+            : [{
+                // 本番環境: 標準出力に JSON 形式で出力
+                target: 'pino/file',
+                options: { destination: 1 },
+                level: 'info' as const
+            }]
+        )
+    ]
+});
+
+export const logger = pino(
+    {
+        level: isDev ? 'debug' : 'info',
+        base: {
+            env: process.env.NODE_ENV
+        }
+    },
+    transport
+);
