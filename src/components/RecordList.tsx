@@ -207,7 +207,7 @@ export function RecordList({ records }: { records: Record[] }) {
                               strokeDasharray={circumference}
                               strokeDashoffset={offset}
                               strokeLinecap="round"
-                              className="text-radiko-blue"
+                              className={isThisPlaying(record) ? "text-white" : "text-radiko-blue"}
                             />
                           </svg>
                         );
