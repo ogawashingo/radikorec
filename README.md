@@ -15,8 +15,8 @@ Linux(Ubuntu)やRaspberry Pi などの常時稼働マシンでの運用を想定
     - 重複予約防止オプション（同一番組の二重予約を回避）
     - 手動スキャン＆プレビュー機能（検索結果を確認してから予約可能）
 - **番組検索**: radiko APIを使った番組キーワード検索。未来の番組と過去の番組をフィルタして表示します。
-- **過去番組ダウンロード**: タイムフリー対象の過去番組を検索結果から直接ダウンロードできます。
-- **内蔵Webプレイヤー**: ブラウザ上で録音ファイルを直接再生。再生速度変更（0.5x〜2.0x）、10秒戻し・30秒送り、シークバー対応。
+- **過去番組ダウンロード**: タイムフリー対象の過去番組を検索結果から直接ダウンロードできます。並列ダウンロードによる高速化と、リアルタイム進捗表示に対応。
+- **内蔵Webプレイヤー**: ブラウザ上で録音ファイルを直接再生。再生速度変更（0.5x〜2.0x）、10秒戻し・30秒送り、シークバー、レジューム再生、キーボードショートカット対応。
 - **番組グループ化**: 録音ファイルを番組タイトルごとにフォルダ分けして表示します。
 - **視聴済み管理**: 録音ファイルの視聴済み／未視聴を管理できます。
 - **動的な放送局リスト**: radiko APIから受信可能な放送局を自動取得します。
@@ -29,7 +29,7 @@ Linux(Ubuntu)やRaspberry Pi などの常時稼働マシンでの運用を想定
 ## 技術スタック
 
 - **Frontend/Backend**: [Next.js](https://nextjs.org/) (App Router)
-- **Database**: SQLite ([better-sqlite3](https://github.com/WiseLibs/better-sqlite3))
+- **Database**: SQLite ([better-sqlite3](https://github.com/WiseLibs/better-sqlite3)) + [Drizzle ORM](https://orm.drizzle.team/)
 - **Scheduling**: [node-cron](https://github.com/node-cron/node-cron)
 - **Logging**: [pino](https://github.com/pinojs/pino) (構造化ログ)
 - **Core Logic**: Pure TypeScript Implementation (ffmpeg wrapper)
