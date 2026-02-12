@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { Menu, X, Radio } from 'lucide-react';
 import { AudioProvider } from '@/context/AudioContext';
 import { PersistentPlayer } from '@/components/PersistentPlayer';
+import { DownloadStatus } from '@/components/DownloadStatus';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -41,6 +42,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 </div>
 
                 <PersistentPlayer />
+                <DownloadStatus />
             </div>
         </AudioProvider>
     );

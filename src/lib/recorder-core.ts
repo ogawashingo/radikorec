@@ -31,7 +31,7 @@ export class RadikoRecorder {
     /**
      * ffmpegを使用して番組を録音する
      */
-    async record(stationId: string, startTime: Date, durationMin: number, outputPath: string, isRealtime: boolean = false): Promise<void> {
+    async record(stationId: string, startTime: Date, durationMin: number, outputPath: string, isRealtime: boolean = false, onProgress?: (percent: number) => void): Promise<void> {
         logger.info({ stationId, isRealtime }, 'Starting recording');
 
         // 1. 認証 (エリアIDと認証トークンの取得)
@@ -84,7 +84,6 @@ export class RadikoRecorder {
             const streamBaseUrl = await this.client.getStreamBaseUrl(stationId);
 
             // 一時ファイルは OS の一時ディレクトリ (/tmp など) に作成する
-            // これにより、権限エラー(EACCES)を回避し、recordsディレクトリを汚さない
             const tmpDir = os.tmpdir();
             const tmpFileBase = `chunk_${crypto.randomBytes(4).toString('hex')}`;
             const fileListPath = path.join(tmpDir, `${tmpFileBase}_filelist.txt`);
@@ -94,101 +93,147 @@ export class RadikoRecorder {
             const lsid = this.getLsid();
 
             const ftStr = this.formatRadikoDate(startTime);
-            // const toStr = this.formatRadikoDate(new Date(startTime.getTime() + durationSec * 1000));
 
             let leftSec = durationSec;
             let currentSeekTime = startTime.getTime();
             let chunkNo = 0;
-            const chunkFiles: string[] = [];
+            const chunkTasks: Array<{
+                chunkNo: number;
+                chunkFile: string;
+                args: string[];
+                l: number;
+            }> = [];
+
+            // 1. 全チャンクのタスク定義を生成
+            while (leftSec > 0) {
+                const chunkFile = path.join(tmpDir, `${tmpFileBase}_${chunkNo}.m4a`);
+
+                // チャンク長計算 (基本300秒)
+                let l = 300;
+                if (leftSec < 300) {
+                    if ((leftSec % 5) === 0) {
+                        l = leftSec;
+                    } else {
+                        l = (Math.floor(leftSec / 5) + 1) * 5;
+                    }
+                }
+
+                const seekDate = new Date(currentSeekTime);
+                const endDate = new Date(currentSeekTime + l * 1000);
+
+                const currentSeekStr = this.formatRadikoDate(seekDate);
+                const currentEndStr = this.formatRadikoDate(endDate);
+
+                // URL構築
+                const url = new URL(streamBaseUrl);
+                url.searchParams.set('station_id', stationId);
+                url.searchParams.set('start_at', ftStr); // 全体の開始時刻
+                url.searchParams.set('ft', ftStr);       // 全体の開始時刻
+                url.searchParams.set('seek', currentSeekStr); // チャンク開始時刻
+                url.searchParams.set('end_at', currentEndStr); // チャンク終了時刻
+                url.searchParams.set('to', currentEndStr);     // チャンク終了時刻
+                url.searchParams.set('l', String(l));
+                url.searchParams.set('lsid', lsid);
+                url.searchParams.set('type', 'c');
+
+                const fullUrl = url.toString();
+
+                const ffmpegArgs = [
+                    '-nostdin',
+                    '-loglevel', 'error',
+                    '-fflags', '+discardcorrupt',
+                    '-user_agent', userAgent,
+                    '-headers', headers,
+                    '-http_seekable', '0',
+                    '-rw_timeout', '30000000',
+                    '-multiple_requests', '1',
+                    '-reconnect', '1',
+                    '-reconnect_streamed', '1',
+                    '-reconnect_delay_max', '5',
+                    '-seekable', '0',
+                    '-i', fullUrl,
+                    '-acodec', 'copy',
+                    '-vn',
+                    '-bsf:a', 'aac_adtstoasc',
+                    '-y',
+                    chunkFile
+                ];
+
+                chunkTasks.push({ chunkNo, chunkFile, args: ffmpegArgs, l });
+
+                leftSec -= l;
+                currentSeekTime += l * 1000;
+                chunkNo++;
+            }
 
             // filelist.txt 作成
-            fs.writeFileSync(fileListPath, '');
+            const fileListContent = chunkTasks.map(t => `file '${t.chunkFile}'`).join('\n');
+            fs.writeFileSync(fileListPath, fileListContent);
+
+            const chunkFiles: string[] = chunkTasks.map(t => t.chunkFile);
 
             try {
-                logger.info({ stationId, durationSec }, 'Starting timefree chunk download');
+                logger.info({ stationId, durationSec, totalChunks: chunkTasks.length }, 'Starting parallel timefree chunk download');
 
-                while (leftSec > 0) {
-                    const chunkFile = path.join(tmpDir, `${tmpFileBase}_${chunkNo}.m4a`);
+                // 2. スライディングウィンドウ方式の並列実行 (最大同時実行数: 4)
+                // 1つ完了するたびに次の1つを開始し、進捗を滑らかに更新する
+                const CONCURRENCY = 4;
+                let completedChunks = 0;
+                let nextTaskIndex = 0;
+                let hasError: Error | null = null;
 
-                    // チャンク長計算 (基本300秒)
-                    let l = 300;
-                    if (leftSec < 300) {
-                        if ((leftSec % 5) === 0) {
-                            l = leftSec;
-                        } else {
-                            l = (Math.floor(leftSec / 5) + 1) * 5;
-                        }
-                    }
-
-                    const seekDate = new Date(currentSeekTime);
-                    const endDate = new Date(currentSeekTime + l * 1000);
-
-                    const currentSeekStr = this.formatRadikoDate(seekDate);
-                    const currentEndStr = this.formatRadikoDate(endDate);
-
-                    // URL構築
-                    const url = new URL(streamBaseUrl);
-                    url.searchParams.set('station_id', stationId);
-                    url.searchParams.set('start_at', ftStr); // 全体の開始時刻
-                    url.searchParams.set('ft', ftStr);       // 全体の開始時刻
-                    url.searchParams.set('seek', currentSeekStr); // チャンク開始時刻
-                    url.searchParams.set('end_at', currentEndStr); // チャンク終了時刻
-                    url.searchParams.set('to', currentEndStr);     // チャンク終了時刻
-                    url.searchParams.set('l', String(l));
-                    url.searchParams.set('lsid', lsid);
-                    url.searchParams.set('type', 'c');
-
-                    const fullUrl = url.toString();
-                    logger.debug({ chunkNo, l, currentSeekStr, currentEndStr }, 'Downloading chunk');
-
-                    const ffmpegArgs = [
-                        '-nostdin',
-                        '-loglevel', 'error',
-                        '-fflags', '+discardcorrupt',
-                        '-user_agent', userAgent,
-                        '-headers', headers,
-                        '-http_seekable', '0',
-                        '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
-                        '-multiple_requests', '1', // HTTP keep-alive
-                        '-reconnect', '1',
-                        '-reconnect_streamed', '1',
-                        '-reconnect_delay_max', '5',
-                        '-seekable', '0',
-                        '-i', fullUrl,
-                        '-acodec', 'copy',
-                        '-vn',
-                        '-bsf:a', 'aac_adtstoasc',
-                        '-y',
-                        chunkFile
-                    ];
-
+                // 個別チャンクのダウンロード処理
+                const executeTask = async (task: typeof chunkTasks[0]) => {
                     let downloadSuccess = false;
                     for (let attempt = 1; attempt <= 3; attempt++) {
                         try {
-                            await this.spawnFfmpeg(ffmpegArgs, `Chunk ${chunkNo} (Attempt ${attempt})`);
-                            if (fs.existsSync(chunkFile)) {
+                            await this.spawnFfmpeg(task.args, `Chunk ${task.chunkNo} (Attempt ${attempt})`);
+                            if (fs.existsSync(task.chunkFile)) {
                                 downloadSuccess = true;
                                 break;
                             }
                         } catch (err) {
-                            console.warn(`[Recorder] Chunk ${chunkNo} download attempt ${attempt} failed: ${err}`);
+                            console.warn(`[Recorder] Chunk ${task.chunkNo} download attempt ${attempt} failed: ${err}`);
                             if (attempt < 3) {
-                                // 5秒待機してリトライ
                                 await new Promise(resolve => setTimeout(resolve, 5000));
                             }
                         }
                     }
 
-                    if (downloadSuccess) {
-                        chunkFiles.push(chunkFile);
-                        fs.appendFileSync(fileListPath, `file '${chunkFile}'\n`);
-                    } else {
-                        throw new Error(`Chunk download failed after 3 attempts: ${chunkFile}`);
+                    if (!downloadSuccess) {
+                        throw new Error(`Chunk download failed after 3 attempts: ${task.chunkFile}`);
                     }
 
-                    leftSec -= l;
-                    currentSeekTime += l * 1000;
-                    chunkNo++;
+                    completedChunks++;
+                    if (onProgress) {
+                        const percent = Math.min(99, Math.floor((completedChunks / chunkTasks.length) * 100));
+                        onProgress(percent);
+                    }
+                };
+
+                // ワーカー関数: キューからタスクを取り出して順次実行
+                const worker = async () => {
+                    while (true) {
+                        const index = nextTaskIndex++;
+                        if (index >= chunkTasks.length || hasError) return;
+                        try {
+                            await executeTask(chunkTasks[index]);
+                        } catch (err) {
+                            hasError = err as Error;
+                            throw err;
+                        }
+                    }
+                };
+
+                // CONCURRENCY 個のワーカーを同時起動
+                const results = await Promise.allSettled(
+                    Array.from({ length: Math.min(CONCURRENCY, chunkTasks.length) }, () => worker())
+                );
+
+                // エラーチェック
+                const failed = results.find(r => r.status === 'rejected');
+                if (failed && failed.status === 'rejected') {
+                    throw failed.reason;
                 }
 
                 // 結合
@@ -204,6 +249,7 @@ export class RadikoRecorder {
                 ];
                 await this.spawnFfmpeg(concatArgs, 'チャンク結合');
                 console.log(`[Recorder] タイムフリー録音完了`);
+                if (onProgress) onProgress(100);
 
             } catch (e) {
                 console.error(`[Recorder] タイムフリー録音エラー`, e);

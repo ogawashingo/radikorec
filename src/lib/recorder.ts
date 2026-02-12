@@ -1,4 +1,5 @@
-import { db } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import { records } from '@/lib/schema';
 import { RadikoRecorder } from '@/lib/recorder-core';
 import { logger } from '@/lib/logger';
 import path from 'path';
@@ -11,7 +12,7 @@ if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
-export async function recordRadiko(stationId: string, durationMin: number, title?: string, scheduleId?: number, startTime?: string, isRealtime: boolean = false) {
+export async function recordRadiko(stationId: string, durationMin: number, title?: string, scheduleId?: number, startTime?: string, isRealtime: boolean = false, onProgress?: (percent: number) => void) {
     return new Promise(async (resolve, reject) => {
         const now = new Date();
         // startTime 文字列を Date 型へ変換
@@ -47,7 +48,7 @@ export async function recordRadiko(stationId: string, durationMin: number, title
         const recorder = new RadikoRecorder();
 
         try {
-            await recorder.record(stationId, startTimeDate, durationMin, outputPath, isRealtime);
+            await recorder.record(stationId, startTimeDate, durationMin, outputPath, isRealtime, onProgress);
 
             // 録音完了後の処理 (DB保存など)
             logger.info({ filename }, 'Recording completed');
@@ -59,14 +60,19 @@ export async function recordRadiko(stationId: string, durationMin: number, title
             const stats = fs.statSync(outputPath);
             const size = stats.size;
 
+
             // records DBに挿入
             try {
-                const stmt = db.prepare(`
-        INSERT INTO records (filename, station_id, title, start_time, duration, file_path, size)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-                // データベースには本来の番組開始時刻 (startTimeDate) を保存する
-                stmt.run(filename, stationId, title || null, startTimeDate.toISOString(), durationMin, `/records/${filename}`, size);
+                drizzleDb.insert(records).values({
+                    filename,
+                    station_id: stationId,
+                    title: title || null,
+                    start_time: startTimeDate.toISOString(),
+                    duration: durationMin,
+                    file_path: `/records/${filename}`,
+                    size,
+                    is_watched: 0
+                }).run();
 
                 resolve({ success: true, filename, size });
 
