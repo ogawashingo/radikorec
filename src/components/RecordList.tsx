@@ -1,18 +1,33 @@
 'use client';
 
 import { Record } from '@/types';
-import { Trash2, Play, Download, Pause, Folder, ChevronRight, ChevronDown } from 'lucide-react';
+import { Trash2, Play, Download, Pause, Folder, ChevronRight, ChevronDown, ArrowUp, ArrowDown, LayoutList, Layers } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
 import { useAudio } from '@/context/AudioContext';
 import { twMerge } from 'tailwind-merge';
 import { ConfirmDialog } from './ConfirmDialog';
 
+// ソートキーの型定義
+type SortKey = 'start_time' | 'title' | 'station_id' | 'size' | 'is_watched';
+
+// ソートボタンの表示名
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'start_time', label: '日付' },
+  { key: 'title', label: 'タイトル' },
+  { key: 'station_id', label: '放送局' },
+  { key: 'size', label: 'サイズ' },
+  { key: 'is_watched', label: '状態' },
+];
+
 export function RecordList({ records }: { records: Record[] }) {
   const router = useRouter();
   const { currentRecord, isPlaying, playRecord, togglePlay, playbackHistory, currentTime, duration } = useAudio();
   const [optimisticRecords, setOptimisticRecords] = useState(records);
   const [stations, setStations] = useState<{ id: string, name: string }[]>([]);
+  const [sortKey, setSortKey] = useState<SortKey>('start_time');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [isGrouped, setIsGrouped] = useState(true);
 
   useEffect(() => {
     setOptimisticRecords(records);
@@ -31,6 +46,16 @@ export function RecordList({ records }: { records: Record[] }) {
     return station ? `${id} ${station.name}` : id;
   };
 
+  // ソートボタンクリック時の処理
+  const handleSortClick = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder(key === 'start_time' || key === 'size' ? 'desc' : 'asc');
+    }
+  };
+
   // グループ化の状態
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [deleteFilename, setDeleteFilename] = useState<string | null>(null);
@@ -45,11 +70,37 @@ export function RecordList({ records }: { records: Record[] }) {
     setExpandedGroups(newExpanded);
   };
 
-  const groupedRecords = useMemo(() => {
+  const sortedAndGroupedRecords = useMemo(() => {
+    // 1. まず全レコードをソート
+    const sorted = [...optimisticRecords].sort((a, b) => {
+      let valA: any = a[sortKey] ?? '';
+      let valB: any = b[sortKey] ?? '';
+
+      // 特殊な値の処理
+      if (sortKey === 'start_time') {
+        valA = new Date(a.start_time || a.created_at).getTime();
+        valB = new Date(b.start_time || b.created_at).getTime();
+      }
+
+      let comparison: number;
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        comparison = valA - valB;
+      } else {
+        comparison = String(valA).localeCompare(String(valB), 'ja');
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    if (!isGrouped) {
+      return [{ title: 'すべての録音', items: sorted, isFlat: true }];
+    }
+
+    // 2. グループ化
     const groups: { [key: string]: Record[] } = {};
     const noTitleKey = 'その他';
 
-    optimisticRecords.forEach(record => {
+    sorted.forEach(record => {
       const key = record.title || noTitleKey;
       if (!groups[key]) {
         groups[key] = [];
@@ -57,7 +108,7 @@ export function RecordList({ records }: { records: Record[] }) {
       groups[key].push(record);
     });
 
-    // ソートキー: 指定されたタイトルを最初に、次に"その他"
+    // 3. グループの並び替え
     const sortedKeys = Object.keys(groups).sort((a, b) => {
       if (a === noTitleKey) return 1;
       if (b === noTitleKey) return -1;
@@ -66,9 +117,10 @@ export function RecordList({ records }: { records: Record[] }) {
 
     return sortedKeys.map(key => ({
       title: key,
-      items: groups[key].sort((a, b) => new Date(b.start_time || b.created_at).getTime() - new Date(a.start_time || a.created_at).getTime())
+      items: groups[key]
+      // itemsは既にソート済み
     }));
-  }, [optimisticRecords]);
+  }, [optimisticRecords, sortKey, sortOrder, isGrouped]);
 
   const executeDelete = async () => {
     if (!deleteFilename) return;
@@ -125,32 +177,91 @@ export function RecordList({ records }: { records: Record[] }) {
 
   return (
     <div className="space-y-4">
-      {groupedRecords.map((group) => (
-        <div key={group.title} className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-          <button
-            onClick={() => toggleGroup(group.title)}
-            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3 text-left">
-              <div className="p-2 bg-blue-50 rounded-xl">
-                <Folder className="w-5 h-5 text-radiko-blue" />
-              </div>
-              <span className="font-bold text-slate-800">{group.title}</span>
-              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                {group.items.length}
-              </span>
-            </div>
-            {expandedGroups.has(group.title) ? (
-              <ChevronDown className="w-5 h-5 text-slate-300" />
-            ) : (
-              <ChevronRight className="w-5 h-5 text-slate-300" />
-            )}
-          </button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* ソートUI */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-400 font-bold mr-1">並び替え</span>
+          {SORT_OPTIONS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => handleSortClick(key)}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${sortKey === key
+                ? 'bg-radiko-blue text-white border-radiko-blue shadow-md shadow-blue-100'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-radiko-blue/40 hover:text-radiko-blue'
+                }`}
+            >
+              {label}
+              {sortKey === key && (
+                sortOrder === 'asc'
+                  ? <ArrowUp className="w-3 h-3" />
+                  : <ArrowDown className="w-3 h-3" />
+              )}
+            </button>
+          ))}
+        </div>
 
-          {expandedGroups.has(group.title) && (
-            <div className="divide-y divide-slate-100 border-t border-slate-100">
+        {/* グループ化切り替え */}
+        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setIsGrouped(true)}
+            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${isGrouped
+              ? 'bg-white text-radiko-blue shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            番組別
+          </button>
+          <button
+            onClick={() => setIsGrouped(false)}
+            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${!isGrouped
+              ? 'bg-white text-radiko-blue shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
+          >
+            <LayoutList className="w-3.5 h-3.5" />
+            フラット
+          </button>
+        </div>
+      </div>
+
+      {sortedAndGroupedRecords.map((group) => (
+        <div key={group.title} className={twMerge(
+          "border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm",
+          !isGrouped && "border-0 shadow-none bg-transparent"
+        )}>
+          {isGrouped && (
+            <button
+              onClick={() => toggleGroup(group.title)}
+              className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center space-x-3 text-left">
+                <div className="p-2 bg-blue-50 rounded-xl">
+                  <Folder className="w-5 h-5 text-radiko-blue" />
+                </div>
+                <span className="font-bold text-slate-800">{group.title}</span>
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                  {group.items.length}
+                </span>
+              </div>
+              {expandedGroups.has(group.title) ? (
+                <ChevronDown className="w-5 h-5 text-slate-300" />
+              ) : (
+                <ChevronRight className="w-5 h-5 text-slate-300" />
+              )}
+            </button>
+          )}
+
+          {(expandedGroups.has(group.title) || !isGrouped) && (
+            <div className={twMerge(
+              "divide-y divide-slate-100 border-t border-slate-100",
+              !isGrouped && "divide-y-0 space-y-3 border-t-0"
+            )}>
               {group.items.map((record) => (
-                <div key={record.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50/50 transition-colors pl-6">
+                <div key={record.id} className={twMerge(
+                  "p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50/50 transition-colors pl-6",
+                  !isGrouped && "bg-white border border-slate-200 rounded-2xl pl-4 hover:border-radiko-blue/30 hover:shadow-lg hover:shadow-blue-100/50"
+                )}>
                   <div className="flex items-start sm:items-center space-x-4 w-full">
                     <button
                       onClick={() => playRecord(record)}
