@@ -12,6 +12,7 @@
   "dependencies": {
     "better-sqlite3": "^12.6.2",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.1",
     "fast-xml-parser": "^5.3.5",
     "lucide-react": "^0.563.0",

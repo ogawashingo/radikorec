@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import { format, getHours, getMinutes, getDay } from 'date-fns';
 import { drizzleDb } from '@/lib/db';
 import { schedules as schedulesTable } from '@/lib/schema';
 import { eq, and, isNull, lte, inArray } from 'drizzle-orm';
@@ -39,18 +40,9 @@ export function initScheduler() {
         // So new Date() returns correct local time. No manual offset needed.
         const jstNow = new Date();
 
-        // JSTでの現在時刻文字列 (YYYY-MM-DDTHH:mm)
-        // ISOStringはUTCを返すため、手動構築またはオフセット調整済みDateを使用
-        // ここでは単純に文字列操作でフォーマット
-        const yyyy = jstNow.getFullYear();
-        const mm = String(jstNow.getMonth() + 1).padStart(2, '0');
-        const dd = String(jstNow.getDate()).padStart(2, '0');
-        const hh = String(jstNow.getHours()).padStart(2, '0');
-        const min = String(jstNow.getMinutes()).padStart(2, '0');
-
-        const localNowStr = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-        const currentTimeStr = `${hh}:${min}`; // HH:mm for weekly check
-        const currentDayOfWeek = jstNow.getDay(); // 0(Sun) - 6(Sat)
+        // date-fns を使用して現在時刻をフォーマット
+        const localNowStr = format(jstNow, "yyyy-MM-dd'T'HH:mm");
+        const currentDayOfWeek = getDay(jstNow); // 0(Sun) - 6(Sat)
 
 
         // 1. ワンタイム予約 (pending かつ 過去)
@@ -87,7 +79,7 @@ export function initScheduler() {
 
             // To be safe we cast s to Schedule (since status in DB is just string)
             const schedule = s as unknown as Schedule;
-            if (shouldTrigger(schedule, yyyy, mm, dd, hh, min)) {
+            if (shouldTrigger(schedule, jstNow)) {
                 targets.push(schedule);
             }
         }
@@ -96,7 +88,7 @@ export function initScheduler() {
         // Weekly processing
         for (const s of weeklySchedules) {
             const schedule = s as unknown as Schedule;
-            if (shouldTriggerWeekly(schedule, hh, min, currentDayOfWeek)) {
+            if (shouldTriggerWeekly(schedule, jstNow)) {
                 targets.push(schedule);
             }
         }
@@ -193,9 +185,9 @@ export function initScheduler() {
     });
 }
 
-function shouldTrigger(s: Schedule, yyyy: number, mm: string, dd: string, hh: string, min: string): boolean {
+export function shouldTrigger(s: Schedule, now: Date): boolean {
     const isRealtime = s.is_realtime === 1;
-    const nowStr = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+    const nowStr = format(now, "yyyy-MM-dd'T'HH:mm");
 
     // ワンタイムは start_time = YYYY-MM-DDTHH:mm
     if (isRealtime) {
@@ -221,7 +213,10 @@ function shouldTrigger(s: Schedule, yyyy: number, mm: string, dd: string, hh: st
     }
 }
 
-function shouldTriggerWeekly(s: Schedule, currentHH: string, currentMin: string, currentDayOfWeek: number): boolean {
+export function shouldTriggerWeekly(s: Schedule, now: Date): boolean {
+    const currentHH = getHours(now);
+    const currentMin = getMinutes(now);
+    const currentDayOfWeek = getDay(now);
     const isRealtime = s.is_realtime === 1;
     let timePart = s.start_time;
     if (s.start_time.includes('T')) {
@@ -251,7 +246,7 @@ function shouldTriggerWeekly(s: Schedule, currentHH: string, currentMin: string,
 
     if (isRealtime) {
         // リアルタイム: 開始時刻と一致したら実行
-        return targetH === Number(currentHH) && targetM === Number(currentMin);
+        return targetH === currentHH && targetM === currentMin;
     } else {
         // タイムフリー: (開始 + 時間 + 5分) と一致したら実行
         const startTotalMin = targetH * 60 + targetM;
@@ -261,7 +256,7 @@ function shouldTriggerWeekly(s: Schedule, currentHH: string, currentMin: string,
         // 日をまたぐ場合の処理 (24 * 60 = 1440)
         let targetTotalMin = triggerTotalMin % 1440;
 
-        const currentTotalMin = Number(currentHH) * 60 + Number(currentMin);
+        const currentTotalMin = currentHH * 60 + currentMin;
 
         return targetTotalMin === currentTotalMin;
     }
