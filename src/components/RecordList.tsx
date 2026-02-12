@@ -188,7 +188,7 @@ export function RecordList({ records }: { records: Record[] }) {
                         const offset = circumference - percent * circumference;
 
                         return (
-                          <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none opacity-20 sm:opacity-30" viewBox={`0 0 ${size} ${size}`}>
+                          <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox={`0 0 ${size} ${size}`}>
                             <circle
                               cx={size / 2}
                               cy={size / 2}
@@ -196,6 +196,7 @@ export function RecordList({ records }: { records: Record[] }) {
                               fill="none"
                               stroke="currentColor"
                               strokeWidth={strokeWidth}
+                              className="opacity-20"
                             />
                             <circle
                               cx={size / 2}
