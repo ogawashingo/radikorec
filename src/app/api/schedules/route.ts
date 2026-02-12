@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import { schedules } from '@/lib/schema';
+import { desc, sql } from 'drizzle-orm';
 
 export async function GET() {
     try {
-        const schedules = db.prepare('SELECT * FROM schedules ORDER BY start_time DESC').all();
-        return NextResponse.json(schedules);
+        const allSchedules = drizzleDb.select().from(schedules).orderBy(desc(schedules.start_time)).all();
+        return NextResponse.json(allSchedules);
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'Failed to fetch schedules' }, { status: 500 });
@@ -17,8 +19,7 @@ export async function POST(request: Request) {
 
         // 一括挿入を処理 (配列)
         if (Array.isArray(body)) {
-            const values: any[] = [];
-            const placeholders: string[] = [];
+            const valuesToInsert: typeof schedules.$inferInsert[] = [];
             let skippedCount = 0;
 
             for (const item of body) {
@@ -26,29 +27,34 @@ export async function POST(request: Request) {
                 if (!station_id || !start_time || !duration) continue;
 
                 // 重複チェック: 同じ駅IDかつ開始時間が2分以内の予約が存在するか確認
-                const existing = db.prepare("SELECT id FROM schedules WHERE station_id = ? AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 120").get(
-                    station_id,
-                    start_time
-                );
+                const existing = drizzleDb.select({ id: schedules.id }).from(schedules)
+                    .where(sql`${schedules.station_id} = ${station_id} AND abs(strftime('%s', ${schedules.start_time}) - strftime('%s', ${start_time})) < 120`)
+                    .get();
 
                 if (existing) {
                     skippedCount++;
                     continue; // 重複をスキップ
                 }
 
-                placeholders.push('(?, ?, ?, ?, ?, ?, ?)');
-                values.push(station_id, start_time, duration, title || '', recurring_pattern || null, day_of_week !== undefined ? day_of_week : null, is_realtime ? 1 : 0);
+                valuesToInsert.push({
+                    station_id,
+                    start_time,
+                    duration,
+                    title: title || '',
+                    recurring_pattern: recurring_pattern || null,
+                    day_of_week: day_of_week !== undefined ? day_of_week : null,
+                    is_realtime: is_realtime ? 1 : 0
+                });
             }
 
-            if (values.length === 0) {
+            if (valuesToInsert.length === 0) {
                 if (skippedCount > 0) {
                     return NextResponse.json({ success: true, count: 0, skipped: skippedCount, message: 'All items were duplicates.' }, { status: 200 });
                 }
                 return NextResponse.json({ error: 'No valid schedules' }, { status: 400 });
             }
 
-            const sql = `INSERT INTO schedules (station_id, start_time, duration, title, recurring_pattern, day_of_week, is_realtime) VALUES ${placeholders.join(', ')}`;
-            const result = db.prepare(sql).run(...values);
+            const result = drizzleDb.insert(schedules).values(valuesToInsert).run();
 
             return NextResponse.json({ success: true, count: result.changes, skipped: skippedCount }, { status: 201 });
         }
@@ -61,23 +67,25 @@ export async function POST(request: Request) {
         }
 
         // 単一挿入の重複チェック
-        const existing = db.prepare("SELECT id FROM schedules WHERE station_id = ? AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 120").get(
-            station_id,
-            start_time
-        );
+        const existing = drizzleDb.select({ id: schedules.id }).from(schedules)
+            .where(sql`${schedules.station_id} = ${station_id} AND abs(strftime('%s', ${schedules.start_time}) - strftime('%s', ${start_time})) < 120`)
+            .get();
 
         if (existing) {
             return NextResponse.json({ error: 'Duplicate schedule' }, { status: 409 });
         }
 
-        const stmt = db.prepare(`
-      INSERT INTO schedules (station_id, start_time, duration, title, recurring_pattern, day_of_week, is_realtime)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
+        const result = drizzleDb.insert(schedules).values({
+            station_id,
+            start_time,
+            duration,
+            title: title || '',
+            recurring_pattern: recurring_pattern || null,
+            day_of_week: day_of_week !== undefined ? day_of_week : null,
+            is_realtime: is_realtime ? 1 : 0
+        }).returning().get();
 
-        const result = stmt.run(station_id, start_time, duration, title || '', recurring_pattern || null, day_of_week !== undefined ? day_of_week : null, is_realtime ? 1 : 0);
-
-        return NextResponse.json({ id: result.lastInsertRowid, ...body }, { status: 201 });
+        return NextResponse.json(result, { status: 201 });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'Failed to create schedule' }, { status: 500 });

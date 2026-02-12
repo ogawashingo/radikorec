@@ -244,7 +244,7 @@ export default function KeywordsPage() {
             }
 
             if (successCount > 0) {
-                alert(`${successCount} 件のダウンロードを開始しました。完了までしばらくお待ちください。`);
+                alert(`${successCount} 件のダウンロードを開始しました。\n進捗は画面右下をご確認ください。`);
             } else {
                 alert('ダウンロードの開始に失敗しました');
             }

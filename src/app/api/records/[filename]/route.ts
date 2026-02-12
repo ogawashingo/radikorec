@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import { records } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
 
@@ -47,13 +49,13 @@ export async function GET(
             headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
             headers.set('Content-Length', chunksize.toString());
 
-            // @ts-ignore: ReadableStream compatible
-            return new NextResponse(file, { status: 206, headers });
+            // Cast Node.js ReadStream to Web ReadableStream
+            return new NextResponse(file as unknown as ReadableStream, { status: 206, headers });
         } else {
             headers.set('Content-Length', fileSize.toString());
             const file = fs.createReadStream(filePath);
-            // @ts-ignore: ReadableStream compatible
-            return new NextResponse(file, { status: 200, headers });
+            // Cast Node.js ReadStream to Web ReadableStream
+            return new NextResponse(file as unknown as ReadableStream, { status: 200, headers });
         }
 
     } catch (error) {
@@ -72,8 +74,7 @@ export async function DELETE(
         const filePath = path.join(recordsDir, filename);
 
         // Delete from DB
-        const stmt = db.prepare('DELETE FROM records WHERE filename = ?');
-        const result = stmt.run(filename);
+        const result = drizzleDb.delete(records).where(eq(records.filename, filename)).run();
 
         if (result.changes === 0) {
             // Even if not in DB, try to delete file? Or return 404?
@@ -104,8 +105,10 @@ export async function PATCH(
             return NextResponse.json({ error: 'is_watched must be a number (0 or 1)' }, { status: 400 });
         }
 
-        const stmt = db.prepare('UPDATE records SET is_watched = ? WHERE filename = ?');
-        const result = stmt.run(is_watched, filename);
+        const result = drizzleDb.update(records)
+            .set({ is_watched })
+            .where(eq(records.filename, filename))
+            .run();
 
         if (result.changes === 0) {
             return NextResponse.json({ error: 'Record not found' }, { status: 404 });

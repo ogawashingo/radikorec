@@ -1,4 +1,6 @@
-import { db } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import { keywords, schedules } from '@/lib/schema';
+import { eq, sql } from 'drizzle-orm';
 import { RadikoClient } from '@/lib/radiko';
 import { sendDiscordNotification } from '@/lib/notifier';
 import { logger } from '@/lib/logger';
@@ -16,9 +18,9 @@ export async function scanAndReserve() {
     logger.info('Starting keyword scan...');
 
     // 1. 有効なキーワードを取得
-    const keywords = db.prepare('SELECT * FROM keywords WHERE enabled = 1').all() as { id: number, keyword: string, prevent_duplicates: number }[];
+    const activeKeywords = drizzleDb.select().from(keywords).where(eq(keywords.enabled, 1)).all();
 
-    if (keywords.length === 0) {
+    if (activeKeywords.length === 0) {
         logger.info('No enabled keywords found.');
         return;
     }
@@ -27,7 +29,7 @@ export async function scanAndReserve() {
     // 同一スキャンセッション内での重複予約を防止するためのセット
     const sessionReserved = new Set<string>();
 
-    for (const k of keywords) {
+    for (const k of activeKeywords) {
         try {
             logger.debug({ keyword: k.keyword }, 'Searching for keyword');
 
@@ -61,11 +63,9 @@ export async function scanAndReserve() {
                     // 放送局を問わず、タイトル（正規化後）と開始時刻が近い予約が既に存在するか確認
                     // SQLite上での正規化は難しいため、まず時間帯が近いものをすべて取得してJS側で判定する
                     // 誤差5分 (300秒) 以内の予約を取得
-                    const candidates = db.prepare(`
-                        SELECT title, start_time 
-                        FROM schedules 
-                        WHERE abs(strftime('%s', start_time) - strftime('%s', ?)) < 300
-                    `).all(prog.start_time.replace(' ', 'T')) as { title: string, start_time: string }[];
+                    const candidates = drizzleDb.select({ title: schedules.title, start_time: schedules.start_time }).from(schedules)
+                        .where(sql`abs(strftime('%s', ${schedules.start_time}) - strftime('%s', ${startTimeStr})) < 300`)
+                        .all();
 
                     const isDuplicate = candidates.some(c => normalizeTitle(c.title || '') === normalizedTitle);
 
@@ -84,15 +84,13 @@ export async function scanAndReserve() {
                 const duration = Math.round((end.getTime() - start.getTime()) / 60000); // minutes
 
                 // 挿入
-                db.prepare(`
-                        INSERT INTO schedules (station_id, start_time, duration, title, status)
-                        VALUES (?, ?, ?, ?, 'pending')
-                    `).run(
-                    prog.station_id,
-                    prog.start_time.replace(' ', 'T'), // Normalize to ISO-ish
+                drizzleDb.insert(schedules).values({
+                    station_id: prog.station_id,
+                    start_time: startTimeStr,
                     duration,
-                    prog.title
-                );
+                    title: prog.title,
+                    status: 'pending'
+                }).run();
 
                 reservedCount++;
                 sessionReserved.add(sessionKey);

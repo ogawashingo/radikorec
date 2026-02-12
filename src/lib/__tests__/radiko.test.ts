@@ -78,16 +78,18 @@ describe('RadikoClient', () => {
     describe('getStations', () => {
         it('should parse station list correctly', async () => {
             const mockXml = `
-                <stations>
-                    <station>
-                        <id>TBS</id>
-                        <name>TBS Radio</name>
-                    </station>
-                    <station>
-                        <id>QRR</id>
-                        <name>Bunka Hoso</name>
-                    </station>
-                </stations>
+                <region>
+                    <stations>
+                        <station>
+                            <id>TBS</id>
+                            <name>TBS Radio</name>
+                        </station>
+                        <station>
+                            <id>QRR</id>
+                            <name>Bunka Hoso</name>
+                        </station>
+                    </stations>
+                </region>
             `;
 
             (global.fetch as jest.Mock).mockResolvedValue({

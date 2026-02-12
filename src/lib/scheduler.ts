@@ -1,5 +1,7 @@
 import cron from 'node-cron';
-import { db } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import { schedules as schedulesTable } from '@/lib/schema';
+import { eq, and, isNull, lte, inArray } from 'drizzle-orm';
 import { recordRadiko } from '@/lib/recorder';
 import { sendDiscordNotification, formatFileSize } from '@/lib/notifier';
 import { scanAndReserve } from '@/lib/scanner';
@@ -8,18 +10,7 @@ import { logger } from '@/lib/logger';
 // 開発中の重複初期化を防ぐためのグローバル参照
 let isSchedulerRunning = false;
 
-interface Schedule {
-    id: number;
-    station_id: string;
-    // フォーマット YYYY-MM-DDTHH:mm または HH:mm (毎週の場合)
-    start_time: string;
-    duration: number;
-    title?: string;
-    recurring_pattern?: string;
-    day_of_week?: number; // 0-6
-    status: string;
-    is_realtime?: number;
-}
+import { Schedule } from '@/types';
 
 export function initScheduler() {
     if (isSchedulerRunning) {
@@ -63,20 +54,20 @@ export function initScheduler() {
 
 
         // 1. ワンタイム予約 (pending かつ 過去)
-        const schedules = db.prepare(`
-            SELECT * FROM schedules 
-            WHERE status = 'pending' 
-              AND recurring_pattern IS NULL 
-              AND start_time <= ?
-        `).all(localNowStr) as Schedule[];
+        const pendingSchedules = drizzleDb.select().from(schedulesTable)
+            .where(and(
+                eq(schedulesTable.status, 'pending'),
+                isNull(schedulesTable.recurring_pattern),
+                lte(schedulesTable.start_time, localNowStr)
+            )).all();
 
         // 2. 毎週予約 (weekly)
         const prevDayOfWeek = (currentDayOfWeek - 1 + 7) % 7;
-        const weeklySchedules = db.prepare(`
-            SELECT * FROM schedules 
-            WHERE recurring_pattern = 'weekly'
-              AND day_of_week IN (?, ?)
-        `).all(currentDayOfWeek, prevDayOfWeek) as Schedule[];
+        const weeklySchedules = drizzleDb.select().from(schedulesTable)
+            .where(and(
+                eq(schedulesTable.recurring_pattern, 'weekly'),
+                inArray(schedulesTable.day_of_week, [currentDayOfWeek, prevDayOfWeek])
+            )).all();
 
         // 両方を結合してチェック
         // One-time schedules (pending) and All Weekly schedules for today
@@ -87,16 +78,26 @@ export function initScheduler() {
         const targets: Schedule[] = [];
 
         // One-time processing
-        for (const s of schedules) {
-            if (shouldTrigger(s, yyyy, mm, dd, hh, min)) {
-                targets.push(s);
+        // One-time processing
+        for (const s of pendingSchedules) {
+            // Pending schedule status is "pending", which is compatible with string, but we cast to Schedule to be safe or ensure select returns compatible types
+            // Drizzle returns inferred type which is compatible with Schedule (except status union if we used it strict, but here we just pass s)
+            // Actually pendingSchedules are from DB, so they match InferSelectModel<typeof schedulesTable>
+            // We need to verify if that matches Schedule alias.
+
+            // To be safe we cast s to Schedule (since status in DB is just string)
+            const schedule = s as unknown as Schedule;
+            if (shouldTrigger(schedule, yyyy, mm, dd, hh, min)) {
+                targets.push(schedule);
             }
         }
 
         // Weekly processing
+        // Weekly processing
         for (const s of weeklySchedules) {
-            if (shouldTriggerWeekly(s, hh, min, currentDayOfWeek)) {
-                targets.push(s);
+            const schedule = s as unknown as Schedule;
+            if (shouldTriggerWeekly(schedule, hh, min, currentDayOfWeek)) {
+                targets.push(schedule);
             }
         }
 
@@ -105,7 +106,7 @@ export function initScheduler() {
 
             // ワンタイムの場合はステータス更新
             if (!s.recurring_pattern) {
-                db.prepare("UPDATE schedules SET status = 'processing' WHERE id = ?").run(s.id);
+                drizzleDb.update(schedulesTable).set({ status: 'processing' }).where(eq(schedulesTable.id, s.id)).run();
             }
 
             // 録音実行
@@ -125,11 +126,11 @@ export function initScheduler() {
 
             const isRealtime = s.is_realtime === 1;
 
-            recordRadiko(s.station_id, s.duration, s.title, s.id, recStartTime, isRealtime)
+            recordRadiko(s.station_id, s.duration, s.title ?? undefined, s.id, recStartTime, isRealtime)
                 .then((res: any) => {
                     console.log(`Schedule completed: ${s.id}`);
                     if (!s.recurring_pattern) {
-                        db.prepare("UPDATE schedules SET status = 'completed', retry_count = 0 WHERE id = ?").run(s.id);
+                        drizzleDb.update(schedulesTable).set({ status: 'completed', retry_count: 0 }).where(eq(schedulesTable.id, s.id)).run();
                     }
 
                     // Discord通知を送信
@@ -149,26 +150,32 @@ export function initScheduler() {
                     const errorMsg = err instanceof Error ? err.message : String(err);
 
                     if (!s.recurring_pattern) {
-                        const newRetryCount = (s as any).retry_count + 1;
+                        const newRetryCount = (s.retry_count || 0) + 1;
                         if (newRetryCount <= 3) {
                             console.log(`Rescheduling ${s.id} for retry ${newRetryCount}...`);
-                            db.prepare("UPDATE schedules SET status = 'pending', retry_count = ?, error_message = ? WHERE id = ?")
-                                .run(newRetryCount, `Retry ${newRetryCount}: ${errorMsg}`, s.id);
+                            drizzleDb.update(schedulesTable).set({
+                                status: 'pending',
+                                retry_count: newRetryCount,
+                                error_message: `Retry ${newRetryCount}: ${errorMsg}`
+                            }).where(eq(schedulesTable.id, s.id)).run();
                         } else {
-                            db.prepare("UPDATE schedules SET status = 'failed', error_message = ? WHERE id = ?")
-                                .run(errorMsg, s.id);
+                            drizzleDb.update(schedulesTable).set({
+                                status: 'failed',
+                                error_message: errorMsg
+                            }).where(eq(schedulesTable.id, s.id)).run();
                         }
                     } else {
                         // Weekly doesn't use retry_count for rescheduling yet to avoid complexity
                         // Just log the error
                         // But we can update the error message
-                        db.prepare("UPDATE schedules SET error_message = ? WHERE id = ?")
-                            .run(`Last attempt failed: ${errorMsg}`, s.id);
+                        drizzleDb.update(schedulesTable).set({
+                            error_message: `Last attempt failed: ${errorMsg}`
+                        }).where(eq(schedulesTable.id, s.id)).run();
                     }
 
                     // Discord通知を送信 (リトライ中は送信しないか、リトライ中であることを明示する)
-                    const isRetrying = !s.recurring_pattern && ((s as any).retry_count + 1 <= 3);
-                    const statusText = isRetrying ? `⚠️ 録音再試行中 (${(s as any).retry_count + 1}/3)` : `❌ 録音失敗`;
+                    const isRetrying = !s.recurring_pattern && ((s.retry_count || 0) + 1 <= 3);
+                    const statusText = isRetrying ? `⚠️ 録音再試行中 (${(s.retry_count || 0) + 1}/3)` : `❌ 録音失敗`;
 
                     sendDiscordNotification(`${statusText}: ${s.title || s.station_id}`, {
                         title: s.title || '無題の番組',

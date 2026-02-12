@@ -1,17 +1,23 @@
 import Link from 'next/link';
-import { db } from '@/lib/db';
-import { Schedule, Record } from '@/types'; // Need to define types
+import { drizzleDb } from '@/lib/db';
+import { schedules, records } from '@/lib/schema';
+import { desc, asc, sql } from 'drizzle-orm';
 import { Plus, Clock, Disc } from 'lucide-react';
 import { ScheduleList } from '@/components/ScheduleList';
 import { RecordList } from '@/components/RecordList';
 import { LogViewer } from '@/components/LogViewer';
+// ... imports
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data
 
 export default function Home() {
   // DBから直接データを取得
-  const schedules = db.prepare('SELECT * FROM schedules ORDER BY start_time ASC').all() as any[]; // quick fix for type
-  const records = db.prepare('SELECT * FROM records ORDER BY created_at DESC LIMIT 5').all() as any[];
+  const allSchedules = drizzleDb.select().from(schedules).orderBy(asc(schedules.start_time)).all().map(s => ({
+    ...s,
+    // Status in DB is string, but Type expects specific union
+    status: (s.status as "pending" | "processing" | "completed" | "failed")
+  }));
+  const recentRecords = drizzleDb.select().from(records).orderBy(desc(records.created_at)).limit(5).all();
 
   return (
     <div className="space-y-8">
@@ -42,7 +48,7 @@ export default function Home() {
             </div>
             <div>
               <div className="text-slate-500 text-sm font-medium">予約中のスケジュール</div>
-              <div className="text-2xl font-bold text-slate-800">{schedules.length}</div>
+              <div className="text-2xl font-bold text-slate-800">{allSchedules.length}</div>
             </div>
           </div>
         </div>
@@ -53,7 +59,7 @@ export default function Home() {
             </div>
             <div>
               <div className="text-slate-500 text-sm font-medium">録音済みファイル</div>
-              <div className="text-2xl font-bold text-slate-800">{(db.prepare('SELECT COUNT(*) as count FROM records').get() as { count: number }).count}</div>
+              <div className="text-2xl font-bold text-slate-800">{drizzleDb.select({ count: sql<number>`count(*)` }).from(records).get()?.count ?? 0}</div>
             </div>
           </div>
         </div>
@@ -66,7 +72,7 @@ export default function Home() {
             <h2 className="text-xl font-bold text-slate-800">今後の予約</h2>
             <Link href="/schedules" className="text-sm font-bold text-radiko-blue hover:text-sky-500">すべて見る</Link>
           </div>
-          <ScheduleList schedules={schedules} />
+          <ScheduleList schedules={allSchedules} />
         </div>
 
         {/* Recent Recordings */}
@@ -75,7 +81,7 @@ export default function Home() {
             <h2 className="text-xl font-bold text-slate-800">最近の録音</h2>
             <Link href="/records" className="text-sm font-bold text-radiko-blue hover:text-sky-500">すべて見る</Link>
           </div>
-          <RecordList records={records} />
+          <RecordList records={recentRecords} />
         </div>
       </div>
 

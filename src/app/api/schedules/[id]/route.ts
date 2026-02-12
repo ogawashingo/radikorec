@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import { schedules } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 // 特定のスケジュール取得 (GET)
 export async function GET(
@@ -8,7 +10,7 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
-        const schedule = db.prepare('SELECT * FROM schedules WHERE id = ?').get(id);
+        const schedule = drizzleDb.select().from(schedules).where(eq(schedules.id, Number(id))).get();
 
         if (!schedule) {
             return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
@@ -30,29 +32,20 @@ export async function PUT(
         const { station_id, start_time, duration, title, recurring_pattern, day_of_week, is_realtime } = body;
         const { id } = await params;
 
-        const stmt = db.prepare(`
-            UPDATE schedules 
-            SET station_id = ?, start_time = ?, duration = ?, title = ?, recurring_pattern = ?, day_of_week = ?,
-                is_realtime = ?, status = 'pending', error_message = NULL
-            WHERE id = ?
-        `);
-
-        // is_realtime can be outdated in body but if passed use it, otherwise keep or default?
-        // Actually, simple PUT usually replaces content. 
-        // We should handle is_realtime update as well since it might change.
-        // Assuming body contains all fields. If not present, default to 0 like create?
-        // Existing code didn't update is_realtime. I should add it.
-
-        const result = stmt.run(
-            station_id,
-            start_time,
-            duration,
-            title || '',
-            recurring_pattern || null,
-            day_of_week !== undefined ? day_of_week : null,
-            is_realtime ? 1 : 0,
-            id
-        );
+        const result = drizzleDb.update(schedules)
+            .set({
+                station_id,
+                start_time,
+                duration,
+                title,
+                recurring_pattern,
+                day_of_week,
+                is_realtime: is_realtime ? 1 : 0,
+                status: 'pending',
+                error_message: null
+            })
+            .where(eq(schedules.id, Number(id)))
+            .run();
 
         if (result.changes === 0) {
             return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
@@ -71,8 +64,7 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-        const stmt = db.prepare('DELETE FROM schedules WHERE id = ?');
-        const result = stmt.run(id);
+        const result = drizzleDb.delete(schedules).where(eq(schedules.id, Number(id))).run();
 
         if (result.changes === 0) {
             return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });

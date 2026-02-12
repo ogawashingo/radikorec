@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1770897947874,
+      "tag": "0000_lazy_titanium_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1770899055801,
+      "tag": "0001_faithful_maelstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1770899652746,
+      "tag": "0002_round_the_stranger",
+      "breakpoints": true
+    }
+  ]
+}

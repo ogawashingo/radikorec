@@ -1,26 +1,8 @@
-export interface Schedule {
-    id: number;
-    station_id: string;
-    start_time: string;
-    duration: number;
-    title?: string;
-    recurring_pattern?: string;
-    day_of_week?: number;
-    status: 'pending' | 'processing' | 'completed' | 'failed';
-    error_message?: string;
-    created_at: string;
-    is_realtime?: number; // 0 or 1
-}
+import { InferSelectModel } from 'drizzle-orm';
+import { schedules, records } from '@/lib/schema';
 
-export interface Record {
-    id: number;
-    filename: string;
-    station_id: string;
-    title?: string;
-    start_time: string;
-    duration: number;
-    file_path: string;
-    size: number;
-    is_watched: number; // 0 or 1
-    created_at: string;
-}
+export type Schedule = InferSelectModel<typeof schedules> & {
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+};
+
+export type Record = InferSelectModel<typeof records>;

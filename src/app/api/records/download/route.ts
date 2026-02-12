@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { recordRadiko } from '@/lib/recorder';
+import { downloadManager } from '@/lib/download-manager';
 
 export async function POST(request: Request) {
     try {
@@ -10,28 +11,27 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
         }
 
-        console.log(`Manual download requested: ${title} (${station_id})`);
+        const safeTitle = title || `Program_${station_id}`;
+        console.log(`Manual download requested: ${safeTitle} (${station_id})`);
 
-        // Immediate recording (TimeFree usually, unless is_realtime is specified but for "past" it is TimeFree)
-        // start_time should be ISO string or compatible
-        // isRealtime = false (default)
+        // Create a job to track progress
+        const jobId = downloadManager.createJob(station_id, safeTitle);
 
-        // Run recording in background (do not await completion for the response, 
-        // BUT user might want to know if it started successfully. 
-        // recordRadiko returns a Promise. If we await it, the request will timeout for long programs.
-        // So we trigger it and return success.)
+        // Run recording in background
+        // recordRadiko returns a Promise.
+        recordRadiko(station_id, duration, title, undefined, start_time, false, (progress) => {
+            downloadManager.updateProgress(jobId, progress);
+        })
+            .then(() => {
+                console.log('Manual download completed');
+                downloadManager.completeJob(jobId);
+            })
+            .catch(err => {
+                console.error('Manual download failed', err);
+                downloadManager.failJob(jobId, err.message);
+            });
 
-        // However, recordRadiko logic currently awaits ffmpeg.
-        // We should wrap it in a non-awaiting function or just not await here.
-
-        // But we want to catch immediate startup errors?
-        // Let's just fire and forget, logging mainly.
-
-        recordRadiko(station_id, duration, title, undefined, start_time, false)
-            .then(() => console.log('Manual download completed'))
-            .catch(err => console.error('Manual download failed', err));
-
-        return NextResponse.json({ success: true, message: 'Download started in background' });
+        return NextResponse.json({ success: true, message: 'Download started in background', jobId });
 
     } catch (error) {
         console.error('Manual download error:', error);

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import { keywords } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export async function DELETE(
     request: Request,
@@ -9,7 +11,7 @@ export async function DELETE(
     const { id } = await params;
 
     try {
-        db.prepare('DELETE FROM keywords WHERE id = ?').run(id);
+        drizzleDb.delete(keywords).where(eq(keywords.id, Number(id))).run();
         return NextResponse.json({ success: true });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to delete keyword' }, { status: 500 });
@@ -25,11 +27,15 @@ export async function PUT(
     const { enabled, prevent_duplicates } = body;
 
     try {
-        if (enabled !== undefined) {
-            db.prepare('UPDATE keywords SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, id);
-        }
-        if (prevent_duplicates !== undefined) {
-            db.prepare('UPDATE keywords SET prevent_duplicates = ? WHERE id = ?').run(prevent_duplicates ? 1 : 0, id);
+        const updateData: Partial<typeof keywords.$inferInsert> = {};
+        if (enabled !== undefined) updateData.enabled = enabled ? 1 : 0;
+        if (prevent_duplicates !== undefined) updateData.prevent_duplicates = prevent_duplicates ? 1 : 0;
+
+        if (Object.keys(updateData).length > 0) {
+            drizzleDb.update(keywords)
+                .set(updateData)
+                .where(eq(keywords.id, Number(id)))
+                .run();
         }
         return NextResponse.json({ success: true });
     } catch (error) {

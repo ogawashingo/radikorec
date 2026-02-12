@@ -20,82 +20,21 @@ const finalDbPath = process.env.DB_FILE_PATH
   ? process.env.DB_FILE_PATH
   : (fs.existsSync(dataPath) || fs.existsSync(path.join(process.cwd(), 'data')) ? dataPath : defaultPath);
 
-export const db = new Database(finalDbPath);
+const db = new Database(finalDbPath);
 
 // データベーススキーマの初期化
-export function initDB() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS schedules (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      station_id TEXT NOT NULL,
-      start_time TEXT NOT NULL, -- ISO 8601 または HH:mm (毎週の場合)
-      end_time TEXT,
-      duration INTEGER,
-      title TEXT,
-      recurring_pattern TEXT,   -- "weekly" または null
-      day_of_week INTEGER,      -- 0=日...6=土 ("weekly"の場合必須)
+// Drizzle instance creation
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import * as schema from './schema';
 
-      status TEXT DEFAULT 'pending',
-      error_message TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      is_realtime INTEGER DEFAULT 0
-    );
+export const drizzleDb = drizzle(db, { schema });
 
-    CREATE TABLE IF NOT EXISTS records (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      filename TEXT NOT NULL UNIQUE,
-      station_id TEXT,
-      title TEXT,               -- 番組タイトル
-      start_time TEXT,
-      duration INTEGER,
-      file_path TEXT,
-      size INTEGER,
-      is_watched INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS keywords (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      keyword TEXT NOT NULL,
-      enabled INTEGER DEFAULT 1,
-      prevent_duplicates INTEGER DEFAULT 1,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  // 既存テーブルのマイグレーション
-  try {
-    db.exec("ALTER TABLE schedules ADD COLUMN status TEXT DEFAULT 'pending'");
-  } catch (e) { /* ignore */ }
-
-  try {
-    db.exec("ALTER TABLE schedules ADD COLUMN day_of_week INTEGER");
-  } catch (e) { /* ignore */ }
-
-  try {
-    db.exec("ALTER TABLE records ADD COLUMN title TEXT");
-  } catch (e) { /* ignore */ }
-
-  try {
-    db.exec("ALTER TABLE schedules ADD COLUMN error_message TEXT");
-  } catch (e) { /* ignore */ }
-
-  try {
-    db.exec("ALTER TABLE schedules ADD COLUMN is_realtime INTEGER DEFAULT 0");
-  } catch (e) { /* ignore */ }
-
-  try {
-    db.exec("ALTER TABLE keywords ADD COLUMN prevent_duplicates INTEGER DEFAULT 1");
-  } catch (e) { /* ignore */ }
-
-  try {
-    db.exec("ALTER TABLE records ADD COLUMN is_watched INTEGER DEFAULT 0");
-  } catch (e) { /* ignore */ }
-
-  try {
-    db.exec("ALTER TABLE schedules ADD COLUMN retry_count INTEGER DEFAULT 0");
-  } catch (e) { /* ignore */ }
+// Run migrations on startup
+try {
+  migrate(drizzleDb, { migrationsFolder: './drizzle' });
+  console.log('Database migrations completed successfully.');
+} catch (error) {
+  console.error('Database migration failed:', error);
 }
 
-// インポート時に初期化を実行 (ホットリロード時は注意が必要だが、IF NOT EXISTS なら無害)
-initDB();
