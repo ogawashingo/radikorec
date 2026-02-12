@@ -79,14 +79,13 @@ export function PersistentPlayer() {
                         <button
                             onClick={() => skip(-10)}
                             className="p-2 text-slate-400 hover:text-radiko-blue transition-colors"
-                            title="10秒戻す"
+                            title="10秒戻す (←)"
                         >
                             <RotateCcw className="w-5 h-5" />
                         </button>
 
                         <button
                             onClick={togglePlay}
-                            className="w-12 h-12 rounded-full bg-radiko-blue hover:bg-sky-400 flex items-center justify-center text-white shadow-lg shadow-blue-200 transition-all hover:scale-105 active:scale-95"
                         >
                             {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
                         </button>
@@ -94,7 +93,7 @@ export function PersistentPlayer() {
                         <button
                             onClick={() => skip(30)}
                             className="p-2 text-slate-400 hover:text-radiko-blue transition-colors"
-                            title="30秒送る"
+                            title="30秒送る (→)"
                         >
                             <RotateCw className="w-5 h-5" />
                         </button>

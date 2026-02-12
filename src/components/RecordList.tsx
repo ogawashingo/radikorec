@@ -10,7 +10,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 export function RecordList({ records }: { records: Record[] }) {
   const router = useRouter();
-  const { currentRecord, isPlaying, playRecord, togglePlay } = useAudio();
+  const { currentRecord, isPlaying, playRecord, togglePlay, playbackHistory, currentTime, duration } = useAudio();
   const [optimisticRecords, setOptimisticRecords] = useState(records);
   const [stations, setStations] = useState<{ id: string, name: string }[]>([]);
 
@@ -155,13 +155,65 @@ export function RecordList({ records }: { records: Record[] }) {
                     <button
                       onClick={() => playRecord(record)}
                       className={twMerge(
-                        "w-10 h-10 sm:w-9 sm:h-9 shrink-0 rounded-full flex items-center justify-center transition-all border shadow-sm",
+                        "w-10 h-10 sm:w-9 sm:h-9 shrink-0 rounded-full flex items-center justify-center transition-all border shadow-sm relative group",
                         isThisPlaying(record)
                           ? "bg-radiko-blue text-white border-radiko-blue shadow-blue-200"
                           : "bg-white text-slate-400 border-slate-200 hover:border-radiko-blue hover:text-radiko-blue"
                       )}
                     >
-                      {isThisPlaying(record) ? <Pause className="w-5 h-5 sm:w-4 sm:h-4" /> : <Play className="w-5 h-5 sm:w-4 sm:h-4 ml-0.5" />}
+                      {/* Progress Ring */}
+                      {(() => {
+                        let progress = 0;
+                        let total = record.duration || 1;
+
+                        if (isThisPlaying(record)) {
+                          progress = currentTime;
+                          total = duration || total;
+                        } else {
+                          const history = playbackHistory[record.id];
+                          if (history) {
+                            progress = history.currentTime;
+                            total = history.duration || total;
+                          }
+                        }
+
+                        if (progress <= 0) return null;
+
+                        const percent = Math.min(1, progress / total);
+
+                        const size = 40; // Desktop size
+                        const strokeWidth = 2;
+                        const radius = (size - strokeWidth) / 2;
+                        const circumference = radius * 2 * Math.PI;
+                        const offset = circumference - percent * circumference;
+
+                        return (
+                          <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none opacity-20 sm:opacity-30" viewBox={`0 0 ${size} ${size}`}>
+                            <circle
+                              cx={size / 2}
+                              cy={size / 2}
+                              r={radius}
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={strokeWidth}
+                            />
+                            <circle
+                              cx={size / 2}
+                              cy={size / 2}
+                              r={radius}
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={strokeWidth}
+                              strokeDasharray={circumference}
+                              strokeDashoffset={offset}
+                              strokeLinecap="round"
+                              className="text-radiko-blue"
+                            />
+                          </svg>
+                        );
+                      })()}
+
+                      {isThisPlaying(record) ? <Pause className="w-5 h-5 sm:w-4 sm:h-4 relative z-10" /> : <Play className="w-5 h-5 sm:w-4 sm:h-4 ml-0.5 relative z-10" />}
                     </button>
 
                     <div className="min-w-0 flex-1">
@@ -248,7 +300,8 @@ export function RecordList({ records }: { records: Record[] }) {
             </div>
           )}
         </div>
-      ))}
+      ))
+      }
       <ConfirmDialog
         isOpen={!!deleteFilename}
         onClose={() => setDeleteFilename(null)}
@@ -257,6 +310,6 @@ export function RecordList({ records }: { records: Record[] }) {
         message="本当に削除してもよろしいですか？ ファイルは完全に削除されます。"
         isDestructive={true}
       />
-    </div>
+    </div >
   );
 }
