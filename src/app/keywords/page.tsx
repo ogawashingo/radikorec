@@ -210,9 +210,41 @@ export default function KeywordsPage() {
             });
 
             if (res.ok) {
-                alert(`${selectedPrograms.length} 件の予約を追加しました`);
+                const data = await res.json();
+                const savedCount = data.count || (data.id ? 1 : 0);
+                const skippedCount = (data.skipped || 0) + (data.crossDuplicateSkipped || 0);
+
+                if (savedCount > 0) {
+                    let msg = `${savedCount} 件の予約を追加しました。`;
+                    if (skippedCount > 0) {
+                        msg += `\n(${skippedCount} 件の重複はスキップされました)`;
+                    }
+                    alert(msg);
+                } else if (skippedCount > 0) {
+                    alert(`⚠️ すべての項目（${skippedCount} 件）が既に予約済みだったため、保存をスキップしました。`);
+                }
+            } else if (res.status === 409) {
+                const data = await res.json();
+                if (data.duplicateType === 'cross') {
+                    const msg = `⚠️ 同じ放送局・曜日・時刻の予約が既に存在します。\n\n既存予約: ${data.existingTitles?.join(', ') || data.existingTitle || '不明'}\n\nそれでも登録しますか？`;
+                    if (confirm(msg)) {
+                        const forceRes = await fetch('/api/schedules', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(schedules.map(s => ({ ...s, force: true })))
+                        });
+                        if (forceRes.ok) {
+                            alert('強制予約しました');
+                        } else {
+                            alert('予約の追加に失敗しました');
+                        }
+                    }
+                } else {
+                    alert('既に同じ録音予約が存在するため、追加をスキップしました。');
+                }
             } else {
-                alert('予約の追加に失敗しました');
+                const data = await res.json().catch(() => ({}));
+                alert(`予約の追加に失敗しました: ${data.error || '不明なエラー'}`);
             }
         } catch (e) {
             alert('エラーが発生しました');

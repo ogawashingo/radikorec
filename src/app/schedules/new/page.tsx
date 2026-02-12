@@ -266,7 +266,7 @@ export default function NewSchedulePage() {
             });
         }
 
-        // ... (fetch to backend)
+        // APIに送信
         const res = await fetch("/api/schedules", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -274,7 +274,47 @@ export default function NewSchedulePage() {
         });
 
         if (res.ok) {
-            router.push("/schedules");
+            const data = await res.json();
+            const savedCount = data.count || (data.id ? 1 : 0);
+            const skippedCount = (data.skipped || 0) + (data.crossDuplicateSkipped || 0);
+
+            if (savedCount > 0) {
+                let msg = `${savedCount} 件の予約を保存しました。`;
+                if (skippedCount > 0) {
+                    msg += `\n(${skippedCount} 件の重複はスキップされました)`;
+                }
+                alert(msg);
+                router.push("/schedules");
+            } else if (skippedCount > 0) {
+                alert(`⚠️ すべての項目（${skippedCount} 件）が既に予約済みだったため、保存をスキップしました。`);
+                router.push("/schedules");
+            } else {
+                router.push("/schedules");
+            }
+        } else if (res.status === 409) {
+            // 重複検知時の処理
+            const data = await res.json();
+            if (data.duplicateType === 'cross') {
+                // クロスタイプ重複: ワンタイム ↔ 毎週予約の競合
+                const msg = `⚠️ 同じ放送局・曜日・時刻の予約が既に存在します。\n\n既存予約: ${data.existingTitles?.join(', ') || data.existingTitle || '不明'}\n\nそれでも登録しますか？`;
+                if (confirm(msg)) {
+                    // force フラグ付きで再送信
+                    const forcePayload = payload.map((p: Record<string, unknown>) => ({ ...p, force: true }));
+                    const forceRes = await fetch("/api/schedules", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(forcePayload),
+                    });
+                    if (forceRes.ok) {
+                        router.push("/schedules");
+                    } else {
+                        alert('予約の保存に失敗しました');
+                    }
+                }
+            } else {
+                // 同型の重複（完全に同じ予約が存在）
+                alert('同じ内容の予約が既に存在します。');
+            }
         } else {
             alert('予約の保存に失敗しました');
         }
