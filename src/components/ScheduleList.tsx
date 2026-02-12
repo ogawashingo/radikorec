@@ -1,19 +1,62 @@
 'use client';
 
 import { Schedule } from '@/types';
-import { Trash2, Calendar } from 'lucide-react';
+import { Trash2, Calendar, ArrowUp, ArrowDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
+
+// ソートキーの型定義
+type SortKey = 'start_time' | 'station_id' | 'status' | 'title';
+
+// ソートボタンの表示名
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'start_time', label: '開始時間' },
+  { key: 'station_id', label: '放送局' },
+  { key: 'status', label: 'ステータス' },
+  { key: 'title', label: 'タイトル' },
+];
 
 export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [optimisticSchedules, setOptimisticSchedules] = useState(schedules);
+  const [sortKey, setSortKey] = useState<SortKey>('start_time');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     setOptimisticSchedules(schedules);
   }, [schedules]);
+
+  // ソートボタンクリック時の処理
+  const handleSortClick = (key: SortKey) => {
+    if (sortKey === key) {
+      // 同じキーなら方向をトグル
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 新しいキーならそのキーにセット（デフォルト降順）
+      setSortKey(key);
+      setSortOrder('desc');
+    }
+  };
+
+  // ソートされたスケジュール
+  const sortedSchedules = useMemo(() => {
+    const sorted = [...optimisticSchedules].sort((a, b) => {
+      const valA = a[sortKey] ?? '';
+      const valB = b[sortKey] ?? '';
+
+      let comparison: number;
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        comparison = valA - valB;
+      } else {
+        comparison = String(valA).localeCompare(String(valB), 'ja');
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    return sorted;
+  }, [optimisticSchedules, sortKey, sortOrder]);
 
   const executeDelete = async () => {
     if (!deleteId) return;
@@ -39,7 +82,29 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
 
   return (
     <div className="space-y-3">
-      {optimisticSchedules.map((schedule) => (
+      {/* ソートUI */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-slate-400 font-bold mr-1">並び替え</span>
+        {SORT_OPTIONS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => handleSortClick(key)}
+            className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${sortKey === key
+                ? 'bg-radiko-blue text-white border-radiko-blue shadow-md shadow-blue-100'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-radiko-blue/40 hover:text-radiko-blue'
+              }`}
+          >
+            {label}
+            {sortKey === key && (
+              sortOrder === 'asc'
+                ? <ArrowUp className="w-3 h-3" />
+                : <ArrowDown className="w-3 h-3" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {sortedSchedules.map((schedule) => (
         <div key={schedule.id} className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group hover:border-radiko-blue/30 hover:shadow-lg hover:shadow-blue-100/50 transition-all">
           <div className="space-y-2 w-full sm:w-auto">
             <div className="flex flex-wrap items-center gap-2">
