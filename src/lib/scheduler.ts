@@ -9,18 +9,20 @@ import { scanAndReserve } from '@/lib/scanner';
 import { logger } from '@/lib/logger';
 
 // 開発中の重複初期化を防ぐためのグローバル参照
-let isSchedulerRunning = false;
+declare global {
+    var isSchedulerRunning: boolean | undefined;
+}
 
 import { Schedule } from '@/types';
 
 export function initScheduler() {
-    if (isSchedulerRunning) {
-        console.log('Scheduler already running.');
+    if (globalThis.isSchedulerRunning) {
+        console.log('Scheduler already running (skipping re-init).');
         return;
     }
 
     logger.info('Starting Scheduler...');
-    isSchedulerRunning = true;
+    globalThis.isSchedulerRunning = true;
 
     // 毎日のキーワードスキャン (04:00 JST)
     cron.schedule('0 4 * * *', async () => {
