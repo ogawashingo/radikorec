@@ -39,7 +39,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             )}>
                 <div className="p-6 flex items-center justify-between border-b border-slate-100">
                     <div className="flex items-center space-x-2">
-                        <img src="/logo.png" alt="radikoRec" className="h-28 w-auto" />
+                        <img src="/logo.png" alt="radikoRec" className="h-16 w-auto" />
                     </div>
                 </div>
                 <nav className="flex-1 p-4 space-y-2">

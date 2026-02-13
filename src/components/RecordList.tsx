@@ -9,15 +9,13 @@ import { twMerge } from 'tailwind-merge';
 import { ConfirmDialog } from './ConfirmDialog';
 
 // ソートキーの型定義
-type SortKey = 'start_time' | 'title' | 'station_id' | 'size' | 'is_watched';
+type SortKey = 'start_time' | 'title' | 'station_id';
 
 // ソートボタンの表示名
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'start_time', label: '日付' },
   { key: 'title', label: 'タイトル' },
   { key: 'station_id', label: '放送局' },
-  { key: 'size', label: 'サイズ' },
-  { key: 'is_watched', label: '状態' },
 ];
 
 export function RecordList({ records }: { records: Record[] }) {
@@ -52,7 +50,7 @@ export function RecordList({ records }: { records: Record[] }) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSortKey(key);
-      setSortOrder(key === 'start_time' || key === 'size' ? 'desc' : 'asc');
+      setSortOrder(key === 'start_time' ? 'desc' : 'asc');
     }
   };
 
@@ -98,24 +96,20 @@ export function RecordList({ records }: { records: Record[] }) {
 
     // 2. グループ化
     const groups: { [key: string]: Record[] } = {};
+    const groupOrder: string[] = [];
     const noTitleKey = 'その他';
 
     sorted.forEach(record => {
       const key = record.title || noTitleKey;
       if (!groups[key]) {
         groups[key] = [];
+        groupOrder.push(key);
       }
       groups[key].push(record);
     });
 
-    // 3. グループの並び替え
-    const sortedKeys = Object.keys(groups).sort((a, b) => {
-      if (a === noTitleKey) return 1;
-      if (b === noTitleKey) return -1;
-      return a.localeCompare(b, 'ja');
-    });
-
-    return sortedKeys.map(key => ({
+    // 3. グループの変換 (出現順 = ソート順 を維持)
+    return groupOrder.map(key => ({
       title: key,
       items: groups[key]
       // itemsは既にソート済み
