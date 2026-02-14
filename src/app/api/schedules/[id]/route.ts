@@ -62,17 +62,22 @@ export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    console.log('[API] DELETE schedule request received');
     try {
         const { id } = await params;
+        console.log(`[API] Deleting schedule ID: ${id}`);
+
         const result = drizzleDb.delete(schedules).where(eq(schedules.id, Number(id))).run();
+        console.log(`[API] Delete result:`, result);
 
         if (result.changes === 0) {
+            console.warn(`[API] Schedule ID ${id} not found for deletion`);
             return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Database error:', error);
+        console.error('[API] Database error during deletion:', error);
         return NextResponse.json({ error: 'Failed to delete schedule' }, { status: 500 });
     }
 }

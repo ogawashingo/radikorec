@@ -61,18 +61,31 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
   const executeDelete = async () => {
     if (!deleteId) return;
 
+    console.log(`Attempting to delete schedule with ID: ${deleteId}`);
+
     // 楽観的更新
     const previousSchedules = optimisticSchedules;
     setOptimisticSchedules(prev => prev.filter(s => s.id !== deleteId));
     setDeleteId(null);
 
     try {
-      await fetch(`/api/schedules/${deleteId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/schedules/${deleteId}`, { method: 'DELETE' });
+      console.log(`Delete response status: ${res.status}`);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Delete failed response:', errorData);
+        throw new Error(errorData.error || `Failed to delete: ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log('Delete successful:', data);
+
       router.refresh();
     } catch (error) {
-      console.error('Failed to delete:', error);
+      console.error('Failed to delete schedule:', error);
       setOptimisticSchedules(previousSchedules);
-      alert('削除に失敗しました');
+      alert(`削除に失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -90,8 +103,8 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
             key={key}
             onClick={() => handleSortClick(key)}
             className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${sortKey === key
-                ? 'bg-radiko-blue text-white border-radiko-blue shadow-md shadow-blue-100'
-                : 'bg-white text-slate-500 border-slate-200 hover:border-radiko-blue/40 hover:text-radiko-blue'
+              ? 'bg-radiko-blue text-white border-radiko-blue shadow-md shadow-blue-100'
+              : 'bg-white text-slate-500 border-slate-200 hover:border-radiko-blue/40 hover:text-radiko-blue'
               }`}
           >
             {label}
