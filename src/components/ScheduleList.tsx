@@ -61,31 +61,18 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
   const executeDelete = async () => {
     if (!deleteId) return;
 
-    console.log(`Attempting to delete schedule with ID: ${deleteId}`);
-
     // 楽観的更新
     const previousSchedules = optimisticSchedules;
     setOptimisticSchedules(prev => prev.filter(s => s.id !== deleteId));
     setDeleteId(null);
 
     try {
-      const res = await fetch(`/api/schedules/${deleteId}`, { method: 'DELETE' });
-      console.log(`Delete response status: ${res.status}`);
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Delete failed response:', errorData);
-        throw new Error(errorData.error || `Failed to delete: ${res.status}`);
-      }
-
-      const data = await res.json();
-      console.log('Delete successful:', data);
-
+      await fetch(`/api/schedules/${deleteId}`, { method: 'DELETE' });
       router.refresh();
     } catch (error) {
-      console.error('Failed to delete schedule:', error);
+      console.error('Failed to delete:', error);
       setOptimisticSchedules(previousSchedules);
-      alert(`削除に失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert('削除に失敗しました');
     }
   };
 
