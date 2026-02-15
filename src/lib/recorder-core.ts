@@ -175,8 +175,7 @@ export class RadikoRecorder {
             try {
                 logger.info({ stationId, durationSec, totalChunks: chunkTasks.length }, 'Starting parallel timefree chunk download');
 
-                // 2. スライディングウィンドウ方式の並列実行 (最大同時実行数: 4)
-                // 1つ完了するたびに次の1つを開始し、進捗を滑らかに更新する
+                // 並列ダウンロード (最大4並列)
                 const CONCURRENCY = 4;
                 let completedChunks = 0;
                 let nextTaskIndex = 0;

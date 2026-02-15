@@ -28,19 +28,15 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
     setOptimisticSchedules(schedules);
   }, [schedules]);
 
-  // ソートボタンクリック時の処理
   const handleSortClick = (key: SortKey) => {
     if (sortKey === key) {
-      // 同じキーなら方向をトグル
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
-      // 新しいキーならそのキーにセット（デフォルト降順）
       setSortKey(key);
       setSortOrder('desc');
     }
   };
 
-  // ソートされたスケジュール
   const sortedSchedules = useMemo(() => {
     const sorted = [...optimisticSchedules].sort((a, b) => {
       const valA = a[sortKey] ?? '';

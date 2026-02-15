@@ -72,7 +72,6 @@ export function initScheduler() {
         const targets: Schedule[] = [];
 
         // One-time processing
-        // One-time processing
         for (const s of pendingSchedules) {
             // Pending schedule status is "pending", which is compatible with string, but we cast to Schedule to be safe or ensure select returns compatible types
             // Drizzle returns inferred type which is compatible with Schedule (except status union if we used it strict, but here we just pass s)
@@ -86,7 +85,6 @@ export function initScheduler() {
             }
         }
 
-        // Weekly processing
         // Weekly processing
         for (const s of weeklySchedules) {
             const schedule = s as unknown as Schedule;

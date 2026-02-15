@@ -6,7 +6,6 @@ import { Plus, Clock, Disc } from 'lucide-react';
 import { ScheduleList } from '@/components/ScheduleList';
 import { RecordList } from '@/components/RecordList';
 import { LogViewer } from '@/components/LogViewer';
-// ... imports
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data
 

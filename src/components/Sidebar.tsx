@@ -2,8 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Radio, Calendar, FileAudio, Settings, Home, Search } from 'lucide-react';
-import { clsx } from 'clsx'; // Make sure clsx is installed or use template literal
-// clsxがインストールされていない場合は、シンプルなテンプレートリテラルで問題ありません。インストール済みです。
+import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 const navItems = [

@@ -126,9 +126,4 @@ export function isAnyDayTimeMatch(
     return false;
 }
 
-// 後方互換のための単一値版（テスト等で使用）
-export const getEffectiveDayTimeFromOneTime = (startTime: string): EffectiveDayTime =>
-    getEffectiveDayTimesFromOneTime(startTime)[0];
 
-export const getEffectiveDayTimeFromWeekly = (dayOfWeek: number, startTime: string): EffectiveDayTime =>
-    getEffectiveDayTimesFromWeekly(dayOfWeek, startTime)[0];
