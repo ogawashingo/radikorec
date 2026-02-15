@@ -49,7 +49,18 @@ docker-compose up -d --build
 - `data/`: データベース (`radikorec.db`) およびログファイル
 - `.env`: 環境変数設定
 
-### 5. 管理コマンド
+### 5. [Linux/Raspberry Pi] 権限の確認 (重要) ⚠️
+LinuxやRaspberry Piで実行する場合、録音ファイルの保存先 (`public/records`) の書き込み権限がないとエラーになることがあります。
+以下のコマンドで、ディレクトリの所有者を現在のユーザーに変更しておくことを推奨します。
+
+```bash
+# 録音用ディレクトリの権限修正
+sudo chown -R 1000:1000 ./public/records
+# または
+sudo chown -R $(id -u):$(id -g) ./public/records
+```
+
+### 6. 管理コマンド
 - **停止**: `docker-compose down`
 - **ログ確認**: `docker-compose logs -f`
 
@@ -123,7 +134,8 @@ pm2 startup
     - `sudo docker-compose up -d --build` のように `sudo` を付与する
     - ユーザーを docker グループに追加する:
       ```bash
-      sudo usermod -aG docker $USER
       # 設定反映（要再ログインまたは以下コマンド）
       newgrp docker
       ```
+- **録音時の Permission denied エラー**: `public/records` ディレクトリへの書き込み権限がありません。
+    - 解決策: `sudo chown -R 1000:1000 ./public/records` を実行して、保存先の所有者を現在のユーザー（コンテナの実行ユーザー）に合わせてください。
