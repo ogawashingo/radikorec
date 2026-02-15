@@ -7,13 +7,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
 
 // ソートキーの型定義
-type SortKey = 'start_time' | 'station_id' | 'status' | 'title';
+type SortKey = 'start_time' | 'station_id' | 'title';
 
 // ソートボタンの表示名
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'start_time', label: '開始時間' },
   { key: 'station_id', label: '放送局' },
-  { key: 'status', label: 'ステータス' },
   { key: 'title', label: 'タイトル' },
 ];
 

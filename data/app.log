@@ -66,3 +66,4 @@
 {"level":30,"time":1770909625695,"env":"development","stationId":"ROK","durationSec":1800,"totalChunks":6,"msg":"Starting parallel timefree chunk download"}
 {"level":30,"time":1770909655982,"env":"development","filename":"池田卓の新島唄紀行_20260211220000.m4a","msg":"Recording completed"}
 {"level":30,"time":1770909656018,"env":"development","filename":"宮沢和史の琉球ソングブック_20260212190000.m4a","msg":"Recording completed"}
+{"level":30,"time":1771158106751,"env":"development","msg":"Starting Scheduler..."}
