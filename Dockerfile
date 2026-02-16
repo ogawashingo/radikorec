@@ -59,6 +59,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # pino は内部で worker_threads を使用し、動的にモジュールを読み込むため、
 # Next.js の standalone トレーサーでは依存関係が正しくコピーされない。
 # pino / pino-pretty の全依存を builder ステージから明示的にコピーする。
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pino ./node_modules/pino
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pino-pretty ./node_modules/pino-pretty
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/thread-stream ./node_modules/thread-stream
