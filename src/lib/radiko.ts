@@ -209,8 +209,23 @@ export class RadikoClient {
 
         const urls = Array.isArray(jsonObj.urls?.url) ? jsonObj.urls.url : [jsonObj.urls?.url].filter(Boolean);
 
-        const match = urls.find((u: any) => u['@_timefree'] === '0' && u['@_areafree'] === areaFreeParam);
-        if (match?.playlist_create_url) return match.playlist_create_url;
+        const matches = urls.filter((u: any) => u['@_timefree'] === '0' && u['@_areafree'] === areaFreeParam);
+
+        if (matches.length > 0) {
+            // 安定している dr-wowza ドメインなどを優先的に選択
+            matches.sort((a: any, b: any) => {
+                const isAGood = a.playlist_create_url && a.playlist_create_url.includes('dr-wowza');
+                const isBGood = b.playlist_create_url && b.playlist_create_url.includes('dr-wowza');
+                if (isAGood && !isBGood) return -1;
+                if (!isAGood && isBGood) return 1;
+                return 0;
+            });
+
+            if (matches[0].playlist_create_url) {
+                logger.info({ stationId, url: matches[0].playlist_create_url }, 'Selected live stream URL');
+                return matches[0].playlist_create_url;
+            }
+        }
 
         throw new Error(`放送局 ${stationId} のライブストリームURLが見つかりませんでした (AreaFree: ${areaFreeParam})`);
     }
