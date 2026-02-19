@@ -29,6 +29,9 @@ export async function scanAndReserve() {
     // 同一スキャンセッション内での重複予約を防止するためのセット
     const sessionReserved = new Set<string>();
 
+    // 予約した番組のリスト
+    const reservedPrograms: { title: string, stationId: string, startTime: string }[] = [];
+
     for (const k of activeKeywords) {
         try {
             logger.debug({ keyword: k.keyword }, 'Searching for keyword');
@@ -94,6 +97,11 @@ export async function scanAndReserve() {
 
                 reservedCount++;
                 sessionReserved.add(sessionKey);
+                reservedPrograms.push({
+                    title: prog.title,
+                    stationId: prog.station_id,
+                    startTime: prog.start_time
+                });
             }
         } catch (e) {
             logger.error({ keyword: k.keyword, error: e }, 'Error processing keyword');
@@ -103,6 +111,32 @@ export async function scanAndReserve() {
     logger.info({ reservedCount }, 'Scan complete');
 
     if (reservedCount > 0) {
-        await sendDiscordNotification(`[キーワード自動予約] ${reservedCount} 件の番組を予約しました。`);
+        // 番組リストを作成 (最大25件程度に制限するなど考慮が必要だが、今回はすべて表示)
+        // Discord Embed Limit: Field value max 1024 chars.
+        // リスト形式: "• [放送局] タイトル (MM/DD HH:mm)"
+        const programListObj = reservedPrograms.map(p => {
+            // p.startTime is "YYYY-MM-DD HH:mm:ss"
+            // convert to "MM/DD HH:mm"
+            const datePart = p.startTime.substring(5, 16).replace(/-/g, '/').replace('T', ' ');
+            return `• [${p.stationId}] ${p.title} (${datePart})`;
+        });
+
+        // 長さ制限対策として、とりあえず最初の20件くらいを表示し、それ以上は「他X件」とする
+        let description = "";
+        const limit = 20;
+
+        if (reservedPrograms.length <= limit) {
+            description = programListObj.join('\n');
+        } else {
+            const shown = programListObj.slice(0, limit);
+            description = shown.join('\n') + `\n...他 ${reservedPrograms.length - limit} 件`;
+        }
+
+        await sendDiscordNotification(`[キーワード自動予約] ${reservedCount} 件の番組を予約しました。`, {
+            title: '予約リスト',
+            color: 0x3498db, // Blue
+            description: description,
+            timestamp: new Date().toISOString()
+        });
     }
 }
