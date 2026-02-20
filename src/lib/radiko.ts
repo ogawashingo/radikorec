@@ -165,11 +165,8 @@ export class RadikoClient {
         return programs;
     }
 
-    async getStreamBaseUrl(stationId: string): Promise<string> {
-        // プレミアムステータスを取得するために認証を確実に行う
+    private async fetchStationUrls(stationId: string) {
         await this.getAuthToken();
-
-        const areaFreeParam = this.areaFree ? '1' : '0';
         const url = `https://radiko.jp/v3/station/stream/pc_html5/${stationId}.xml`;
 
         const res = await fetch(url);
@@ -179,7 +176,13 @@ export class RadikoClient {
         const jsonObj = this.parser.parse(xml);
 
         // jsonObj.urls.url は配列の場合とオブジェクトの場合がある
-        const urls = Array.isArray(jsonObj.urls?.url) ? jsonObj.urls.url : [jsonObj.urls?.url].filter(Boolean);
+        return Array.isArray(jsonObj.urls?.url) ? jsonObj.urls.url : [jsonObj.urls?.url].filter(Boolean);
+    }
+
+    async getStreamBaseUrl(stationId: string): Promise<string> {
+        // プレミアムステータスを取得するために認証を確実に行う
+        const urls = await this.fetchStationUrls(stationId);
+        const areaFreeParam = this.areaFree ? '1' : '0';
 
         // timefree="1" かつ areafree=areaFreeParam のものを探す
         const match = urls.find((u: any) => u['@_timefree'] === '1' && u['@_areafree'] === areaFreeParam);
@@ -196,18 +199,8 @@ export class RadikoClient {
     }
 
     async getLiveStreamBaseUrl(stationId: string): Promise<string> {
-        await this.getAuthToken();
-
+        const urls = await this.fetchStationUrls(stationId);
         const areaFreeParam = this.areaFree ? '1' : '0';
-        const url = `https://radiko.jp/v3/station/stream/pc_html5/${stationId}.xml`;
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`XMLの取得に失敗しました: ${res.status}`);
-
-        const xml = await res.text();
-        const jsonObj = this.parser.parse(xml);
-
-        const urls = Array.isArray(jsonObj.urls?.url) ? jsonObj.urls.url : [jsonObj.urls?.url].filter(Boolean);
 
         const matches = urls.filter((u: any) => u['@_timefree'] === '0' && u['@_areafree'] === areaFreeParam);
 
