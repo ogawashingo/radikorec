@@ -29,13 +29,13 @@ interface RadikoProg {
 
 export interface Program {
     title: string;
-    start_time: string; // "2024-01-01 12:00:00"
+    start_time: string; // 例: "2024-01-01 12:00:00"
     end_time: string;
     station_id: string;
     performer: string;
     description: string;
-    display_time?: string; // "25:00"
-    status: string; // "past", "now", "future"
+    display_time?: string; // 例: "25:00"
+    status: string; // "past" (過去), "now" (現在), "future" (未来)
 }
 
 export class RadikoClient {
@@ -60,7 +60,7 @@ export class RadikoClient {
         // 1. プレミアムログイン（設定されている場合）
         if (mail && password) {
             try {
-                logger.info('Attempting Radiko Premium login...');
+                logger.info('Radikoプレミアムログインを試行します...');
                 const loginRes = await fetch('https://radiko.jp/v4/api/member/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -73,7 +73,7 @@ export class RadikoClient {
                         radikoSession = data.radiko_session;
                         // 文字列の "1" か 数値の 1 かに対応するため緩い比較を使用
                         this.areaFree = data.areafree == 1;
-                        logger.info(`Radiko Premium login successful. AreaFree: ${this.areaFree}`);
+                        logger.info(`Radikoプレミアムログイン成功。AreaFree: ${this.areaFree}`);
                     } catch (parseErr: unknown) {
                         // Node.js 20+ における閉じたストリームの特定エラー処理
                         if (parseErr instanceof Error && parseErr.message.includes('ReadableStream is already closed')) {
@@ -83,10 +83,10 @@ export class RadikoClient {
                         }
                     }
                 } else {
-                    logger.error({ error: await loginRes.text() }, 'Radiko Premium login failed');
+                    logger.error({ error: await loginRes.text() }, 'Radikoプレミアムログインに失敗しました');
                 }
             } catch (e) {
-                logger.error({ err: e }, 'Radiko Premium login error');
+                logger.error({ err: e }, 'Radikoプレミアムログインエラーが発生しました');
             }
         }
 
@@ -101,7 +101,7 @@ export class RadikoClient {
             }
         });
 
-        if (!auth1Res.ok) throw new Error('Auth1 failed');
+        if (!auth1Res.ok) throw new Error('Auth1（認証ステップ1）に失敗しました');
 
         const token = auth1Res.headers.get('x-radiko-authtoken');
         const offset = parseInt(auth1Res.headers.get('x-radiko-keyoffset') || '0');
@@ -130,7 +130,7 @@ export class RadikoClient {
 
         if (!auth2Res.ok) {
             const errText = await auth2Res.text();
-            throw new Error(`Auth2 failed: ${auth2Res.status} ${errText}`);
+            throw new Error(`Auth2（認証ステップ2）に失敗しました: ${auth2Res.status} ${errText}`);
         }
 
         const bodyText = await auth2Res.text();
@@ -142,7 +142,7 @@ export class RadikoClient {
         // 有効期限を 24時間後 に設定
         this.tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
 
-        logger.info({ areaId }, 'Radiko Auth success');
+        logger.info({ areaId }, 'Radiko認証成功');
 
         return { authtoken: token, area_id: areaId };
     }
@@ -164,12 +164,12 @@ export class RadikoClient {
         const res = await fetch(url);
 
         if (!res.ok) {
-            throw new Error(`Search failed: ${res.status}`);
+            throw new Error(`検索に失敗しました: ${res.status}`);
         }
 
         const data: SearchResult = await res.json();
-        // Radiko Search API returns start_time_s directly (e.g. "2500")
-        // Mapping it to display_time for frontend
+        // Radikoの検索APIは start_time_s を直接返す (例: "2500")
+        // フロントエンド向けに display_time へマッピングする
         const programs = data.data.map(p => {
             const startTimeS = (p as unknown as Record<string, unknown>).start_time_s as string | undefined;
             if (startTimeS) {
@@ -209,7 +209,7 @@ export class RadikoClient {
         // フォールバック: timefree="1" なら何でも
         const fallback = urls.find(u => u['@_timefree'] === '1');
         if (fallback?.playlist_create_url && typeof fallback.playlist_create_url === 'string') {
-            logger.warn({ stationId }, 'Strict areafree match failed, falling back to any timefree URL');
+            logger.warn({ stationId }, '厳密なエリアフリー一致に失敗しました。任意のタイムフリーURLにフォールバックします');
             return fallback.playlist_create_url;
         }
 
@@ -234,7 +234,7 @@ export class RadikoClient {
 
             const bestUrl = matches[0].playlist_create_url;
             if (typeof bestUrl === 'string') {
-                logger.info({ stationId, url: bestUrl }, 'Selected live stream URL');
+                logger.info({ stationId, url: bestUrl }, 'ライブストリームURLを選択しました');
                 return bestUrl;
             }
         }
@@ -247,7 +247,7 @@ export class RadikoClient {
         const res = await fetch(url);
 
         if (!res.ok) {
-            throw new Error(`Failed to fetch programs: ${res.status}`);
+            throw new Error(`番組リストの取得に失敗しました: ${res.status}`);
         }
 
         const xml = await res.text();
@@ -255,7 +255,7 @@ export class RadikoClient {
 
         const programs: Program[] = [];
 
-        // XML structure: radiko > stations > station > scd > progs > prog
+        // XMLの構造: radiko > stations > station > scd > progs > prog
         const station = jsonObj.radiko?.stations?.station;
         if (!station) return [];
 
@@ -314,7 +314,7 @@ export class RadikoClient {
     private sanitizeString(val: unknown): string {
         if (val === null || val === undefined) return '';
         if (typeof val === 'string') return val.trim();
-        // fast-xml-parser may wrap content if there are mixed children, but usually it's just the string content
+        // fast-xml-parserは子要素が混在している場合にコンテンツをラップする可能性があるが、通常は単なる文字列コンテンツ
         if (typeof val === 'object' && val !== null && '#text' in val) {
             return String((val as Record<string, unknown>)['#text']).trim();
         }
@@ -329,7 +329,7 @@ export class RadikoClient {
         const xml = await res.text();
         const jsonObj = this.parser.parse(xml);
 
-        // XML structure: region > stations[] > station[]
+        // XMLの構造: region > stations[] > station[]
         const regionNodes = Array.isArray(jsonObj.region?.stations)
             ? jsonObj.region.stations
             : [jsonObj.region?.stations].filter(Boolean);
