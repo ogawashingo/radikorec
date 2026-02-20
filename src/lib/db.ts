@@ -16,14 +16,15 @@ const db = new Database(finalDbPath);
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as schema from './schema';
+import { logger } from '@/lib/logger';
 
 export const drizzleDb = drizzle(db, { schema });
 
 // マイグレーション実行
 try {
   migrate(drizzleDb, { migrationsFolder: './drizzle' });
-  console.log('Database migrations completed successfully.');
+  logger.info('Database migrations completed successfully.');
 } catch (error) {
-  console.error('Database migration failed:', error);
+  logger.error('Database migration failed:', error);
 }
 

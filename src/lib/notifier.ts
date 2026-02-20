@@ -1,7 +1,8 @@
+import { logger } from '@/lib/logger';
 export async function sendDiscordNotification(content: string, embed?: any) {
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
     if (!webhookUrl) {
-        console.warn('DISCORD_WEBHOOK_URL is not set. Skipping notification.');
+        logger.warn('DISCORD_WEBHOOK_URL is not set. Skipping notification.');
         return;
     }
 
@@ -23,7 +24,7 @@ export async function sendDiscordNotification(content: string, embed?: any) {
             throw new Error(`Discord Webhook failed with status ${response.status}`);
         }
     } catch (error) {
-        console.error('Failed to send Discord notification:', error);
+        logger.error('Failed to send Discord notification:', error);
     }
 }
 

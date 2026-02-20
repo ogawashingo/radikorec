@@ -17,7 +17,7 @@ import { Schedule } from '@/types';
 
 export function initScheduler() {
     if (globalThis.isSchedulerRunning) {
-        console.log('Scheduler already running (skipping re-init).');
+        logger.info('Scheduler already running (skipping re-init).');
         return;
     }
 
@@ -26,11 +26,11 @@ export function initScheduler() {
 
     // 毎日のキーワードスキャン (04:00 JST)
     cron.schedule('0 4 * * *', async () => {
-        console.log('Running daily keyword scan...');
+        logger.info('Running daily keyword scan...');
         try {
             await scanAndReserve();
         } catch (e) {
-            console.error('Keyword scan failed:', e);
+            logger.error('Keyword scan failed:', e);
         }
     }, {
         timezone: "Asia/Tokyo"
@@ -120,7 +120,7 @@ export function initScheduler() {
 
             recordRadiko(s.station_id, s.duration, s.title ?? undefined, s.id, recStartTime, isRealtime)
                 .then((res: any) => {
-                    console.log(`Schedule completed: ${s.id}`);
+                    logger.info(`Schedule completed: ${s.id}`);
                     if (!s.recurring_pattern) {
                         drizzleDb.update(schedulesTable).set({ status: 'completed', retry_count: 0 }).where(eq(schedulesTable.id, s.id)).run();
                     }
@@ -138,13 +138,13 @@ export function initScheduler() {
                     });
                 })
                 .catch(err => {
-                    console.error('Recording error:', err);
+                    logger.error('Recording error:', err);
                     const errorMsg = err instanceof Error ? err.message : String(err);
 
                     if (!s.recurring_pattern) {
                         const newRetryCount = (s.retry_count || 0) + 1;
                         if (newRetryCount <= 3) {
-                            console.log(`Rescheduling ${s.id} for retry ${newRetryCount}...`);
+                            logger.info(`Rescheduling ${s.id} for retry ${newRetryCount}...`);
                             drizzleDb.update(schedulesTable).set({
                                 status: 'pending',
                                 retry_count: newRetryCount,

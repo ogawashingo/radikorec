@@ -42,8 +42,7 @@ describe('Scheduler Singleton', () => {
         // テストごとにグローバル変数をリセット
         globalThis.isSchedulerRunning = undefined;
         jest.clearAllMocks();
-        // console.log をスパイ
-        jest.spyOn(console, 'log').mockImplementation(() => { });
+        // console.log のスパイは不要になったため削除
     });
 
     afterEach(() => {
@@ -63,10 +62,10 @@ describe('Scheduler Singleton', () => {
 
         // 2回目はログ出力されず、cron.scheduleも増えないはず
         // ただし "Scheduler already running" のログは出る
-        expect(console.log).toHaveBeenCalledWith('Scheduler already running (skipping re-init).');
+        expect(logger.info).toHaveBeenCalledWith('Scheduler already running (skipping re-init).');
 
-        // logger.info は増えていないはず
-        expect(logger.info).toHaveBeenCalledTimes(1);
+        // logger.info は合計2回（1回目初期化 + 2回目スキップ）
+        expect(logger.info).toHaveBeenCalledTimes(2);
 
         // cron.schedule も増えていないはず
         expect(cron.schedule).toHaveBeenCalledTimes(2);
