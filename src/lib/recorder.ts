@@ -76,7 +76,7 @@ export async function recordRadiko(stationId: string, durationMin: number, title
             return { success: true, filename, size };
 
         } catch (dbError) {
-            logger.error('DBへの保存に失敗しました:', dbError);
+            logger.error({ error: dbError }, 'DBへの保存に失敗しました:');
             return { success: true, filename, error: 'DB Insert Failed' };
         }
 

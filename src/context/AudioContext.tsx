@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { Record as RadioRecord } from '@/types';
-import { logger } from '@/lib/logger';
 
 interface AudioContextType {
     currentRecord: RadioRecord | null;
@@ -122,7 +121,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
                     }
                 }
             } catch (e) {
-                logger.error('Failed to restore player state', e);
+                console.error('Failed to restore player state', e);
             }
         }
 

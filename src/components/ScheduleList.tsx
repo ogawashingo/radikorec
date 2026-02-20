@@ -5,6 +5,7 @@ import { Trash2, Calendar, ArrowUp, ArrowDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { ConfirmDialog } from './ConfirmDialog';
+import { formatToLateNightTime, DAYS_OF_WEEK } from '@/lib/date';
 
 // ソートキーの型定義
 type SortKey = 'start_time' | 'station_id' | 'title';
@@ -20,17 +21,7 @@ function formatDisplayDate(schedule: Schedule): string {
   if (schedule.recurring_pattern === 'weekly') {
     return schedule.start_time ?? '';
   }
-  if (!schedule.start_time) return '';
-  const d = new Date(schedule.start_time);
-  let displayH = d.getHours();
-  let displayD = d;
-  if (displayH < 5) {
-    displayH += 24;
-    displayD = new Date(d);
-    displayD.setDate(d.getDate() - 1);
-  }
-  const days = ['日', '月', '火', '水', '木', '金', '土'];
-  return `${displayD.getMonth() + 1}/${displayD.getDate()} (${days[displayD.getDay()]}) ${String(displayH).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return formatToLateNightTime(schedule.start_time);
 }
 
 function StatusBadge({ status }: { status?: string }) {
@@ -139,7 +130,7 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
               <StatusBadge status={schedule.status} />
               {schedule.recurring_pattern === 'weekly' && (
                 <span className="bg-purple-50 text-purple-600 text-[10px] px-2 py-0.5 rounded font-bold border border-purple-100">
-                  毎週 {['日', '月', '火', '水', '木', '金', '土'][schedule.day_of_week ?? 0]}
+                  毎週 {DAYS_OF_WEEK[schedule.day_of_week ?? 0]}
                 </span>
               )}
               {schedule.is_realtime === 1 && (

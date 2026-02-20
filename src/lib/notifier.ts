@@ -24,7 +24,7 @@ export async function sendDiscordNotification(content: string, embed?: any) {
             throw new Error(`Discord Webhook failed with status ${response.status}`);
         }
     } catch (error) {
-        logger.error('Failed to send Discord notification:', error);
+        logger.error({ error }, 'Failed to send Discord notification:');
     }
 }
 

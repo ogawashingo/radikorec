@@ -30,7 +30,7 @@ export function initScheduler() {
         try {
             await scanAndReserve();
         } catch (e) {
-            logger.error('Keyword scan failed:', e);
+            logger.error({ error: e }, 'Keyword scan failed:');
         }
     }, {
         timezone: "Asia/Tokyo"
@@ -138,7 +138,7 @@ export function initScheduler() {
                     });
                 })
                 .catch(err => {
-                    logger.error('Recording error:', err);
+                    logger.error({ error: err }, 'Recording error:');
                     const errorMsg = err instanceof Error ? err.message : String(err);
 
                     if (!s.recurring_pattern) {

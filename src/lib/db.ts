@@ -25,6 +25,6 @@ try {
   migrate(drizzleDb, { migrationsFolder: './drizzle' });
   logger.info('Database migrations completed successfully.');
 } catch (error) {
-  logger.error('Database migration failed:', error);
+  logger.error({ error }, 'Database migration failed:');
 }
 
