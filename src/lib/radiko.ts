@@ -13,6 +13,20 @@ interface SearchResult {
     data: Program[];
 }
 
+interface StreamUrl {
+    '@_timefree'?: string;
+    '@_areafree'?: string;
+    playlist_create_url?: string;
+}
+
+interface RadikoProg {
+    '@_ft'?: string;
+    '@_dur'?: string;
+    title?: string | { '#text': string };
+    pfm?: string | { '#text': string };
+    desc?: string | { '#text': string };
+}
+
 export interface Program {
     title: string;
     start_time: string; // "2024-01-01 12:00:00"
@@ -168,7 +182,7 @@ export class RadikoClient {
         return programs;
     }
 
-    private async fetchStationUrls(stationId: string) {
+    private async fetchStationUrls(stationId: string): Promise<StreamUrl[]> {
         await this.getAuthToken();
         const url = `https://radiko.jp/v3/station/stream/pc_html5/${stationId}.xml`;
 
@@ -179,7 +193,8 @@ export class RadikoClient {
         const jsonObj = this.parser.parse(xml);
 
         // jsonObj.urls.url は配列の場合とオブジェクトの場合がある
-        return Array.isArray(jsonObj.urls?.url) ? jsonObj.urls.url : [jsonObj.urls?.url].filter(Boolean);
+        const urls = Array.isArray(jsonObj.urls?.url) ? jsonObj.urls.url : [jsonObj.urls?.url].filter(Boolean);
+        return urls as StreamUrl[];
     }
 
     async getStreamBaseUrl(stationId: string): Promise<string> {
@@ -188,11 +203,11 @@ export class RadikoClient {
         const areaFreeParam = this.areaFree ? '1' : '0';
 
         // timefree="1" かつ areafree=areaFreeParam のものを探す
-        const match = urls.find((u: Record<string, unknown>) => u['@_timefree'] === '1' && u['@_areafree'] === areaFreeParam);
+        const match = urls.find(u => u['@_timefree'] === '1' && u['@_areafree'] === areaFreeParam);
         if (match?.playlist_create_url && typeof match.playlist_create_url === 'string') return match.playlist_create_url;
 
         // フォールバック: timefree="1" なら何でも
-        const fallback = urls.find((u: Record<string, unknown>) => u['@_timefree'] === '1');
+        const fallback = urls.find(u => u['@_timefree'] === '1');
         if (fallback?.playlist_create_url && typeof fallback.playlist_create_url === 'string') {
             logger.warn({ stationId }, 'Strict areafree match failed, falling back to any timefree URL');
             return fallback.playlist_create_url;
@@ -205,11 +220,11 @@ export class RadikoClient {
         const urls = await this.fetchStationUrls(stationId);
         const areaFreeParam = this.areaFree ? '1' : '0';
 
-        const matches = urls.filter((u: Record<string, unknown>) => u['@_timefree'] === '0' && u['@_areafree'] === areaFreeParam);
+        const matches = urls.filter(u => u['@_timefree'] === '0' && u['@_areafree'] === areaFreeParam);
 
         if (matches.length > 0) {
             // 安定している dr-wowza ドメインなどを優先的に選択
-            matches.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+            matches.sort((a, b) => {
                 const isAGood = typeof a.playlist_create_url === 'string' && a.playlist_create_url.includes('dr-wowza');
                 const isBGood = typeof b.playlist_create_url === 'string' && b.playlist_create_url.includes('dr-wowza');
                 if (isAGood && !isBGood) return -1;
@@ -245,8 +260,8 @@ export class RadikoClient {
         if (!station) return [];
 
         const progs = Array.isArray(station.scd?.progs?.prog)
-            ? station.scd.progs.prog
-            : [station.scd?.progs?.prog].filter(Boolean);
+            ? station.scd.progs.prog as RadikoProg[]
+            : ([station.scd?.progs?.prog].filter(Boolean) as RadikoProg[]);
 
         for (const prog of progs) {
             const ft = prog['@_ft'];
