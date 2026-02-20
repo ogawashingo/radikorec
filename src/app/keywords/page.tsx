@@ -86,11 +86,12 @@ export default function KeywordsPage() {
         setKeywords(prev => prev.map(k => k.id === id ? { ...k, enabled: newEnabled } : k));
 
         try {
-            await fetch(`/api/keywords/${id}`, {
+            const res = await fetch(`/api/keywords/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ enabled: newEnabled })
             });
+            if (!res.ok) throw new Error('API Error');
         } catch (error) {
             fetchKeywords(); // Revert
         }
@@ -102,11 +103,12 @@ export default function KeywordsPage() {
         setKeywords(prev => prev.map(k => k.id === id ? { ...k, prevent_duplicates: newValue } : k));
 
         try {
-            await fetch(`/api/keywords/${id}`, {
+            const res = await fetch(`/api/keywords/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prevent_duplicates: newValue })
             });
+            if (!res.ok) throw new Error('API Error');
         } catch (error) {
             fetchKeywords(); // Revert
         }
@@ -129,7 +131,8 @@ export default function KeywordsPage() {
         setKeywords(prev => prev.filter(k => k.id !== id));
 
         try {
-            await fetch(`/api/keywords/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/keywords/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('API Error');
         } catch (error) {
             fetchKeywords(); // Revert on failure
         }

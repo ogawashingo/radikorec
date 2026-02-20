@@ -125,7 +125,8 @@ export function RecordList({ records }: { records: Record[] }) {
     setDeleteFilename(null);
 
     try {
-      await fetch(`/api/records/${deleteFilename}`, { method: 'DELETE' });
+      const res = await fetch(`/api/records/${deleteFilename}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`サーバエラーが発生しました: ${res.status}`);
       router.refresh();
     } catch (e) {
       console.error(e);
