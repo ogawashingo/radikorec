@@ -183,10 +183,20 @@ export class RadikoClient {
     }
 
     private async fetchStationUrls(stationId: string): Promise<StreamUrl[]> {
-        await this.getAuthToken();
-        const url = `https://radiko.jp/v3/station/stream/pc_html5/${stationId}.xml`;
+        const attemptFetch = async (forceRefresh: boolean) => {
+            await this.getAuthToken(forceRefresh);
+            const url = `https://radiko.jp/v3/station/stream/pc_html5/${stationId}.xml`;
+            return await fetch(url);
+        };
 
-        const res = await fetch(url);
+        let res = await attemptFetch(false);
+
+        // 認証エラー（不正なトークンなど）の場合はトークンを再取得してリトライ
+        if (res.status === 401 || res.status === 403) {
+            logger.warn({ stationId, status: res.status }, 'Auth token expired or invalid, refreshing...');
+            res = await attemptFetch(true);
+        }
+
         if (!res.ok) throw new Error(`XMLの取得に失敗しました: ${res.status}`);
 
         const xml = await res.text();
@@ -243,8 +253,16 @@ export class RadikoClient {
     }
 
     async getProgramSchedule(stationId: string, date: string): Promise<Program[]> {
+        // 番組表APIは認証なしでも動作するが、完全な情報を得るために認証を含めることがある。
+        // 現在は認証ヘッダを送っていないため通常は不要だが、将来的に拡張された際のためにリトライの枠組みを用意しておく。
         const url = `https://radiko.jp/v3/program/station/date/${date}/${stationId}.xml`;
-        const res = await fetch(url);
+        let res = await fetch(url);
+
+        if (!res.ok && (res.status === 401 || res.status === 403)) {
+            // もし将来的にAuthTokenをヘッダに付与した際に期限切れとなった場合のリトライ
+            await this.getAuthToken(true);
+            res = await fetch(url);
+        }
 
         if (!res.ok) {
             throw new Error(`番組リストの取得に失敗しました: ${res.status}`);

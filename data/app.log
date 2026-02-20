@@ -76,3 +76,4 @@
 {"level":30,"time":1771203363729,"env":"production","filename":"沖縄テスト953_20260216095300.m4a","msg":"Recording completed"}
 {"level":30,"time":1771565322254,"env":"test","msg":"Database migrations completed successfully."}
 {"level":30,"time":1771565355439,"env":"test","msg":"Database migrations completed successfully."}
+{"level":30,"time":1771565474071,"env":"test","msg":"Database migrations completed successfully."}
