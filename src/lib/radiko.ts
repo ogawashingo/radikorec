@@ -9,7 +9,7 @@ interface RadikoAuthResult {
 }
 
 interface SearchResult {
-    meta: any;
+    meta: Record<string, unknown>;
     data: Program[];
 }
 
@@ -28,13 +28,14 @@ export class RadikoClient {
     private authToken: string | null = null;
     private areaId: string | null = null;
     private areaFree: boolean = false;
+    private tokenExpiresAt: number = 0;
     private parser = new XMLParser({
         ignoreAttributes: false,
         attributeNamePrefix: "@_"
     });
 
-    async getAuthToken(): Promise<RadikoAuthResult> {
-        if (this.authToken && this.areaId) {
+    async getAuthToken(forceRefresh = false): Promise<RadikoAuthResult> {
+        if (!forceRefresh && this.authToken && this.areaId && Date.now() < this.tokenExpiresAt) {
             return { authtoken: this.authToken, area_id: this.areaId };
         }
 
@@ -45,7 +46,7 @@ export class RadikoClient {
         // 1. プレミアムログイン（設定されている場合）
         if (mail && password) {
             try {
-                console.log('Attempting Radiko Premium login...');
+                logger.info('Attempting Radiko Premium login...');
                 const loginRes = await fetch('https://radiko.jp/v4/api/member/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -58,20 +59,20 @@ export class RadikoClient {
                         radikoSession = data.radiko_session;
                         // 文字列の "1" か 数値の 1 かに対応するため緩い比較を使用
                         this.areaFree = data.areafree == 1;
-                        console.log(`Radiko Premium login successful. AreaFree: ${this.areaFree}`);
-                    } catch (parseErr: any) {
+                        logger.info(`Radiko Premium login successful. AreaFree: ${this.areaFree}`);
+                    } catch (parseErr: unknown) {
                         // Node.js 20+ における閉じたストリームの特定エラー処理
-                        if (parseErr.message && parseErr.message.includes('ReadableStream is already closed')) {
-                            console.warn('ログインレスポンス解析中の ReadableStream エラーを抑制しました (Node.js 既知の問題)');
+                        if (parseErr instanceof Error && parseErr.message.includes('ReadableStream is already closed')) {
+                            logger.warn('ログインレスポンス解析中の ReadableStream エラーを抑制しました (Node.js 既知の問題)');
                         } else {
                             throw parseErr;
                         }
                     }
                 } else {
-                    console.error('Radiko Premium login failed', await loginRes.text());
+                    logger.error({ error: await loginRes.text() }, 'Radiko Premium login failed');
                 }
             } catch (e) {
-                console.error('Radiko Premium login error', e);
+                logger.error({ err: e }, 'Radiko Premium login error');
             }
         }
 
@@ -124,6 +125,8 @@ export class RadikoClient {
 
         this.authToken = token;
         this.areaId = areaId;
+        // 有効期限を 24時間後 に設定
+        this.tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
 
         logger.info({ areaId }, 'Radiko Auth success');
 
@@ -154,7 +157,7 @@ export class RadikoClient {
         // Radiko Search API returns start_time_s directly (e.g. "2500")
         // Mapping it to display_time for frontend
         const programs = data.data.map(p => {
-            const startTimeS = (p as any).start_time_s;
+            const startTimeS = (p as unknown as Record<string, unknown>).start_time_s as string | undefined;
             if (startTimeS) {
                 const hour = startTimeS.substring(0, 2);
                 const min = startTimeS.substring(2, 4);
@@ -185,12 +188,12 @@ export class RadikoClient {
         const areaFreeParam = this.areaFree ? '1' : '0';
 
         // timefree="1" かつ areafree=areaFreeParam のものを探す
-        const match = urls.find((u: any) => u['@_timefree'] === '1' && u['@_areafree'] === areaFreeParam);
-        if (match?.playlist_create_url) return match.playlist_create_url;
+        const match = urls.find((u: Record<string, unknown>) => u['@_timefree'] === '1' && u['@_areafree'] === areaFreeParam);
+        if (match?.playlist_create_url && typeof match.playlist_create_url === 'string') return match.playlist_create_url;
 
         // フォールバック: timefree="1" なら何でも
-        const fallback = urls.find((u: any) => u['@_timefree'] === '1');
-        if (fallback?.playlist_create_url) {
+        const fallback = urls.find((u: Record<string, unknown>) => u['@_timefree'] === '1');
+        if (fallback?.playlist_create_url && typeof fallback.playlist_create_url === 'string') {
             logger.warn({ stationId }, 'Strict areafree match failed, falling back to any timefree URL');
             return fallback.playlist_create_url;
         }
@@ -202,21 +205,22 @@ export class RadikoClient {
         const urls = await this.fetchStationUrls(stationId);
         const areaFreeParam = this.areaFree ? '1' : '0';
 
-        const matches = urls.filter((u: any) => u['@_timefree'] === '0' && u['@_areafree'] === areaFreeParam);
+        const matches = urls.filter((u: Record<string, unknown>) => u['@_timefree'] === '0' && u['@_areafree'] === areaFreeParam);
 
         if (matches.length > 0) {
             // 安定している dr-wowza ドメインなどを優先的に選択
-            matches.sort((a: any, b: any) => {
-                const isAGood = a.playlist_create_url && a.playlist_create_url.includes('dr-wowza');
-                const isBGood = b.playlist_create_url && b.playlist_create_url.includes('dr-wowza');
+            matches.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+                const isAGood = typeof a.playlist_create_url === 'string' && a.playlist_create_url.includes('dr-wowza');
+                const isBGood = typeof b.playlist_create_url === 'string' && b.playlist_create_url.includes('dr-wowza');
                 if (isAGood && !isBGood) return -1;
                 if (!isAGood && isBGood) return 1;
                 return 0;
             });
 
-            if (matches[0].playlist_create_url) {
-                logger.info({ stationId, url: matches[0].playlist_create_url }, 'Selected live stream URL');
-                return matches[0].playlist_create_url;
+            const bestUrl = matches[0].playlist_create_url;
+            if (typeof bestUrl === 'string') {
+                logger.info({ stationId, url: bestUrl }, 'Selected live stream URL');
+                return bestUrl;
             }
         }
 
@@ -292,11 +296,13 @@ export class RadikoClient {
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
-    private sanitizeString(val: any): string {
-        if (!val) return '';
+    private sanitizeString(val: unknown): string {
+        if (val === null || val === undefined) return '';
         if (typeof val === 'string') return val.trim();
         // fast-xml-parser may wrap content if there are mixed children, but usually it's just the string content
-        if (val['#text']) return String(val['#text']).trim();
+        if (typeof val === 'object' && val !== null && '#text' in val) {
+            return String((val as Record<string, unknown>)['#text']).trim();
+        }
         return String(val).trim();
     }
 

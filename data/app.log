@@ -67,3 +67,10 @@
 {"level":30,"time":1770909655982,"env":"development","filename":"池田卓の新島唄紀行_20260211220000.m4a","msg":"Recording completed"}
 {"level":30,"time":1770909656018,"env":"development","filename":"宮沢和史の琉球ソングブック_20260212190000.m4a","msg":"Recording completed"}
 {"level":30,"time":1771158106751,"env":"development","msg":"Starting Scheduler..."}
+{"level":30,"time":1771200606748,"env":"production","msg":"Starting Scheduler..."}
+{"level":30,"time":1771203050312,"env":"production","msg":"Starting Scheduler..."}
+{"level":30,"time":1771203180023,"env":"production","title":"沖縄テスト953","stationId":"ROK","msg":"Triggering schedule"}
+{"level":30,"time":1771203180025,"env":"production","stationId":"ROK","isRealtime":true,"msg":"Starting recording"}
+{"level":30,"time":1771203180304,"env":"production","areaId":"JP12","msg":"Radiko Auth success"}
+{"level":30,"time":1771203180326,"env":"production","stationId":"ROK","url":"https://dr-wowza.radiko-cf.com/so/playlist.m3u8","msg":"Selected live stream URL"}
+{"level":30,"time":1771203363729,"env":"production","filename":"沖縄テスト953_20260216095300.m4a","msg":"Recording completed"}

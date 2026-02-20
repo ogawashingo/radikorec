@@ -16,6 +16,33 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'title', label: 'タイトル' },
 ];
 
+function formatDisplayDate(schedule: Schedule): string {
+  if (schedule.recurring_pattern === 'weekly') {
+    return schedule.start_time ?? '';
+  }
+  if (!schedule.start_time) return '';
+  const d = new Date(schedule.start_time);
+  let displayH = d.getHours();
+  let displayD = d;
+  if (displayH < 5) {
+    displayH += 24;
+    displayD = new Date(d);
+    displayD.setDate(d.getDate() - 1);
+  }
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  return `${displayD.getMonth() + 1}/${displayD.getDate()} (${days[displayD.getDay()]}) ${String(displayH).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function StatusBadge({ status }: { status?: string }) {
+  if (!status) return <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase border bg-slate-50 text-slate-400 border-slate-100">{status}</span>;
+
+  if (status === 'completed') return <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase border bg-green-50 text-green-600 border-green-100">{status}</span>;
+  if (status === 'failed') return <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase border bg-red-50 text-red-600 border-red-100">{status}</span>;
+  if (status === 'processing') return <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase border bg-blue-50 text-radiko-blue border-blue-100 animate-pulse">{status}</span>;
+
+  return <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase border bg-slate-50 text-slate-400 border-slate-100">{status}</span>;
+}
+
 export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -62,7 +89,10 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
     setDeleteId(null);
 
     try {
-      await fetch(`/api/schedules/${deleteId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/schedules/${deleteId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        throw new Error(`サーバエラーが発生しました: ${res.status}`);
+      }
       router.refresh();
     } catch (error) {
       console.error('Failed to delete:', error);
@@ -106,13 +136,7 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
               <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-slate-200">
                 {schedule.station_id}
               </span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${schedule.status === 'completed' ? 'bg-green-50 text-green-600 border-green-100' :
-                schedule.status === 'failed' ? 'bg-red-50 text-red-600 border-red-100' :
-                  schedule.status === 'processing' ? 'bg-blue-50 text-radiko-blue border-blue-100 animate-pulse' :
-                    'bg-slate-50 text-slate-400 border-slate-100'
-                }`}>
-                {schedule.status}
-              </span>
+              <StatusBadge status={schedule.status} />
               {schedule.recurring_pattern === 'weekly' && (
                 <span className="bg-purple-50 text-purple-600 text-[10px] px-2 py-0.5 rounded font-bold border border-purple-100">
                   毎週 {['日', '月', '火', '水', '木', '金', '土'][schedule.day_of_week ?? 0]}
@@ -130,21 +154,7 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 font-medium">
               <div className="flex items-center space-x-1">
                 <Calendar className="w-3.5 h-3.5" />
-                {schedule.recurring_pattern === 'weekly' ? (
-                  <span>{schedule.start_time}</span>
-                ) : (
-                  <span>{(() => {
-                    const d = new Date(schedule.start_time);
-                    let displayH = d.getHours();
-                    let displayD = d;
-                    if (displayH < 5) {
-                      displayH += 24;
-                      displayD = new Date(d);
-                      displayD.setDate(d.getDate() - 1);
-                    }
-                    return `${displayD.getMonth() + 1}/${displayD.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][displayD.getDay()]}) ${String(displayH).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                  })()}</span>
-                )}
+                <span>{formatDisplayDate(schedule)}</span>
               </div>
               <span className="opacity-30">•</span>
               <span>{schedule.duration} 分</span>
