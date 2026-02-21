@@ -125,7 +125,11 @@ export function RecordList({ records }: { records: Record[] }) {
     setDeleteFilename(null);
 
     try {
-      const res = await fetch(`/api/records/${encodeURIComponent(deleteFilename)}`, { method: 'DELETE' });
+      const res = await fetch(`/api/records`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: deleteFilename })
+      });
       if (!res.ok) throw new Error(`サーバエラーが発生しました: ${res.status}`);
       router.refresh();
     } catch (e) {
@@ -148,10 +152,10 @@ export function RecordList({ records }: { records: Record[] }) {
     ));
 
     try {
-      const res = await fetch(`/api/records/${encodeURIComponent(record.filename)}`, {
+      const res = await fetch(`/api/records`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_watched: newStatus })
+        body: JSON.stringify({ filename: record.filename, is_watched: newStatus })
       });
       if (!res.ok) throw new Error('Failed to update status');
       router.refresh();
