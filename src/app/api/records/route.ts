@@ -69,7 +69,23 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { filename } = await request.json();
+        const url = new URL(request.url);
+        const fileParam = url.searchParams.get('file');
+
+        let filename = fileParam;
+        if (!filename) {
+            try {
+                const body = await request.json();
+                filename = body.filename;
+            } catch (e) {
+                // Ignore JSON parse errors if we don't have a body
+            }
+        }
+
+        if (!filename) {
+            return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
+        }
+
         const recordsDir = path.join(process.cwd(), 'public', 'records');
         const filePath = path.join(recordsDir, filename);
 
@@ -78,13 +94,20 @@ export async function DELETE(request: Request) {
 
         // Delete from Filesystem
         if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+            try {
+                fs.unlinkSync(filePath);
+            } catch (e) {
+                const err = e as Error;
+                console.error('Failed to unlink file:', err);
+                return NextResponse.json({ error: `DB record deleted but failed to delete file from disk: ${err.message}` }, { status: 500 });
+            }
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error deleting record:', error);
-        return NextResponse.json({ error: 'Failed to delete record' }, { status: 500 });
+        const err = error as Error;
+        console.error('Error deleting record:', err);
+        return NextResponse.json({ error: `Failed to delete record: ${err.message}` }, { status: 500 });
     }
 }
 

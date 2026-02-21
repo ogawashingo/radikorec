@@ -125,17 +125,26 @@ export function RecordList({ records }: { records: Record[] }) {
     setDeleteFilename(null);
 
     try {
-      const res = await fetch(`/api/records`, {
+      const res = await fetch(`/api/records?file=${encodeURIComponent(deleteFilename)}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: deleteFilename })
       });
-      if (!res.ok) throw new Error(`サーバエラーが発生しました: ${res.status}`);
+      if (!res.ok) {
+        let errText = `HTTP ${res.status}`;
+        try {
+          const data = await res.json();
+          if (data.error) errText = data.error;
+        } catch {
+          // fallback
+        }
+        throw new Error(errText);
+      }
       router.refresh();
     } catch (e) {
       console.error(e);
       setOptimisticRecords(previous);
-      alert('削除に失敗しました');
+      alert('削除に失敗しました: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
