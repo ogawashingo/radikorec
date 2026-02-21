@@ -86,11 +86,18 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
         }
 
+        // Decode the filename cleanly handles query parameters
+        filename = decodeURIComponent(filename);
+
         const recordsDir = path.join(process.cwd(), 'public', 'records');
         const filePath = path.join(recordsDir, filename);
 
         // Delete from DB
         const result = drizzleDb.delete(records).where(eq(records.filename, filename)).run();
+
+        if (result.changes === 0) {
+            return NextResponse.json({ error: `データベース上にファイル ${filename} の記録が見つかりませんでした (削除件数: 0)` }, { status: 404 });
+        }
 
         // Delete from Filesystem
         if (fs.existsSync(filePath)) {
@@ -101,6 +108,8 @@ export async function DELETE(request: Request) {
                 console.error('Failed to unlink file:', err);
                 return NextResponse.json({ error: `DB record deleted but failed to delete file from disk: ${err.message}` }, { status: 500 });
             }
+        } else {
+            console.warn(`File not found on disk: ${filePath}`);
         }
 
         return NextResponse.json({ success: true });
