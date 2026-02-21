@@ -38,13 +38,13 @@ export function initScheduler() {
 
     // 1分ごとに実行
     cron.schedule('* * * * *', async () => {
-        // Docker container is now set to JST (TZ=Asia/Tokyo)
-        // So new Date() returns correct local time. No manual offset needed.
+        // Dockerコンテナは現在JST (TZ=Asia/Tokyo) に設定されています
+        // そのため、new Date()は正しいローカル時刻を返します。手動でのオフセットは不要です。
         const jstNow = new Date();
 
         // date-fns を使用して現在時刻をフォーマット
         const localNowStr = format(jstNow, "yyyy-MM-dd'T'HH:mm");
-        const currentDayOfWeek = getDay(jstNow); // 0(Sun) - 6(Sat)
+        const currentDayOfWeek = getDay(jstNow); // 0(日) - 6(土)
 
 
         // 1. ワンタイム予約 (pending かつ 過去)
@@ -64,14 +64,14 @@ export function initScheduler() {
             )).all();
 
         // 両方を結合してチェック
-        // One-time schedules (pending) and All Weekly schedules for today
-        // We filter them based on:
-        // - Realtime: Trigger at Start Time
-        // - TimeFree: Trigger at End Time (Start + Duration + Buffer)
+        // 今日のワンタイム予約（pending）とすべての毎週予約
+        // 以下に基づいてフィルタリングします：
+        // - リアルタイム：開始時刻にトリガー
+        // - タイムフリー：終了時刻にトリガー（開始時刻 + 録音時間 + バッファ）
 
         const targets: Schedule[] = [];
 
-        // One-time processing
+        // ワンタイム予約の処理
         for (const s of pendingSchedules) {
             const schedule = s as unknown as Schedule;
             if (shouldTrigger(schedule, jstNow)) {
@@ -79,7 +79,7 @@ export function initScheduler() {
             }
         }
 
-        // Weekly processing
+        // 毎週予約の処理
         for (const s of weeklySchedules) {
             const schedule = s as unknown as Schedule;
             if (shouldTriggerWeekly(schedule, jstNow)) {
@@ -122,7 +122,7 @@ export function initScheduler() {
                     // Discord通知を送信
                     sendDiscordNotification(`✅ 録音完了: ${s.title || s.station_id}`, {
                         title: s.title || '無題の番組',
-                        color: 0x00ff00, // Green
+                        color: 0x00ff00, // 緑色
                         fields: [
                             { name: '放送局', value: s.station_id, inline: true },
                             { name: 'サイズ', value: formatFileSize(res.size || 0), inline: true },
@@ -151,9 +151,9 @@ export function initScheduler() {
                             }).where(eq(schedulesTable.id, s.id)).run();
                         }
                     } else {
-                        // Weekly doesn't use retry_count for rescheduling yet to avoid complexity
-                        // Just log the error
-                        // But we can update the error message
+                        // 現在、毎週予約（weekly）は複雑さを避けるため、再スケジュールに retry_count を使用していません
+                        // エラーをログに記録するのみです
+                        // ただし、エラーメッセージの更新は行います
                         drizzleDb.update(schedulesTable).set({
                             error_message: `Last attempt failed: ${errorMsg}`
                         }).where(eq(schedulesTable.id, s.id)).run();
@@ -165,7 +165,7 @@ export function initScheduler() {
 
                     sendDiscordNotification(`${statusText}: ${s.title || s.station_id}`, {
                         title: s.title || '無題の番組',
-                        color: isRetrying ? 0xffa500 : 0xff0000, // Orange or Red
+                        color: isRetrying ? 0xffa500 : 0xff0000, // オレンジ色または赤色
                         description: `エラー内容: \`\`\`${errorMsg}\`\`\``,
                         fields: [
                             { name: '放送局', value: s.station_id, inline: true },
@@ -194,7 +194,7 @@ export function shouldTrigger(s: Schedule, now: Date): boolean {
         // start_time から duration を足して終了時刻を計算
         const start = new Date(s.start_time);
         const end = new Date(start.getTime() + s.duration * 60000);
-        // バッファ 5分 (Radiko側の生成待ち時間を考慮して長めに)
+        // バッファ 5分 (radiko側の生成待ち時間を考慮して長めに)
         const triggerTime = new Date(end.getTime() + 5 * 60000);
 
         // トリガー時刻を "HH:mm" で比較するのは難しいので、分単位の差分で見る
@@ -216,23 +216,23 @@ export function shouldTriggerWeekly(s: Schedule, now: Date): boolean {
     if (s.start_time.includes('T')) {
         timePart = s.start_time.split('T')[1];
     }
-    const [startH, startM] = timePart.split(':').map(Number); // e.g. "25:30" -> 25, 30
+    const [startH, startM] = timePart.split(':').map(Number); // 例: "25:30" -> 25, 30
 
     let targetH = startH;
     const targetM = startM;
 
-    // Determine effective target hour for TODAY
+    // 「今日」の実際のターゲットとなる時間を決定
     if (s.day_of_week !== currentDayOfWeek) {
-        // This is a schedule from a different day (Yesterday)
-        // It triggers today ONLY if it is a Late Night schedule (>24h)
+        // これは別の日（昨日）のスケジュールです
+        // 深夜番組（24時間以上）の場合にのみ、今日トリガーされます
         if (startH >= 24) {
             targetH = startH - 24;
         } else {
             return false;
         }
     } else {
-        // This is a schedule for Today.
-        // If startH >= 24, it runs Tomorrow (so ignore Today)
+        // これは今日のスケジュールです
+        // もし startH >= 24 の場合、明日実行されます（そのため今日は無視します）
         if (startH >= 24) {
             return false;
         }
