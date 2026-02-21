@@ -61,7 +61,7 @@ export class RadikoClient {
         // 1. プレミアムログイン（設定されている場合）
         if (mail && password) {
             try {
-                logger.info('Radikoプレミアムログインを試行します...');
+                logger.info('radikoプレミアムログインを試行します...');
                 const loginRes = await fetch('https://radiko.jp/v4/api/member/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -74,7 +74,7 @@ export class RadikoClient {
                         radikoSession = data.radiko_session;
                         // 文字列の "1" か 数値の 1 かに対応するため緩い比較を使用
                         this.areaFree = data.areafree == 1;
-                        logger.info(`Radikoプレミアムログイン成功。AreaFree: ${this.areaFree}`);
+                        logger.info(`radikoプレミアムログイン成功。AreaFree: ${this.areaFree}`);
                     } catch (parseErr: unknown) {
                         // Node.js 20+ における閉じたストリームの特定エラー処理
                         if (parseErr instanceof Error && parseErr.message.includes('ReadableStream is already closed')) {
@@ -84,10 +84,10 @@ export class RadikoClient {
                         }
                     }
                 } else {
-                    logger.error({ error: await loginRes.text() }, 'Radikoプレミアムログインに失敗しました');
+                    logger.error({ error: await loginRes.text() }, 'radikoプレミアムログインに失敗しました');
                 }
             } catch (e) {
-                logger.error({ err: e }, 'Radikoプレミアムログインエラーが発生しました');
+                logger.error({ err: e }, 'radikoプレミアムログインエラーが発生しました');
             }
         }
 
@@ -143,7 +143,7 @@ export class RadikoClient {
         // 有効期限を 24時間後 に設定
         this.tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
 
-        logger.info({ areaId }, 'Radiko認証成功');
+        logger.info({ areaId }, 'radiko認証成功');
 
         return { authtoken: token, area_id: areaId };
     }
@@ -169,7 +169,7 @@ export class RadikoClient {
         }
 
         const data: SearchResult = await res.json();
-        // Radikoの検索APIは start_time_s を直接返す (例: "2500")
+        // radikoの検索APIは start_time_s を直接返す (例: "2500")
         // フロントエンド向けに display_time へマッピングする
         const programs = data.data.map(p => {
             const startTimeS = (p as unknown as Record<string, unknown>).start_time_s as string | undefined;
