@@ -37,7 +37,7 @@ export async function recordRadiko(stationId: string, durationMin: number, title
 
     let safeTitle = stationId;
     if (title) {
-        safeTitle = title.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_');
+        safeTitle = title.replace(/[\\/:*?"<>|#]/g, '').replace(/\s+/g, '_');
     }
 
     // 拡張子は RadikoRecorder が m4a で保存する (ffmpeg -acodec copy)

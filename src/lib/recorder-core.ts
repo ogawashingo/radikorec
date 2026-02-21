@@ -101,7 +101,7 @@ export class RadikoRecorder {
 
             // 1. 全チャンクのタスク定義を生成
             while (leftSec > 0) {
-                const chunkFile = path.join(tmpDir, `${tmpFileBase}_${chunkNo}.m4a`);
+                const chunkFile = path.join(tmpDir, `${tmpFileBase}_${chunkNo}.aac`);
 
                 // チャンク長計算 (基本300秒)
                 let l = 300;
@@ -149,7 +149,6 @@ export class RadikoRecorder {
                     '-i', fullUrl,
                     '-acodec', 'copy',
                     '-vn',
-                    '-bsf:a', 'aac_adtstoasc',
                     '-y',
                     chunkFile
                 ];
@@ -238,6 +237,8 @@ export class RadikoRecorder {
                     '-safe', '0',
                     '-i', fileListPath,
                     '-c', 'copy',
+                    '-bsf:a', 'aac_adtstoasc',
+                    '-movflags', '+faststart',
                     '-y',
                     outputPath
                 ];

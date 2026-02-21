@@ -125,7 +125,7 @@ export function RecordList({ records }: { records: Record[] }) {
     setDeleteFilename(null);
 
     try {
-      const res = await fetch(`/api/records/${deleteFilename}`, { method: 'DELETE' });
+      const res = await fetch(`/api/records/${encodeURIComponent(deleteFilename)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(`サーバエラーが発生しました: ${res.status}`);
       router.refresh();
     } catch (e) {
@@ -148,7 +148,7 @@ export function RecordList({ records }: { records: Record[] }) {
     ));
 
     try {
-      const res = await fetch(`/api/records/${record.filename}`, {
+      const res = await fetch(`/api/records/${encodeURIComponent(record.filename)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_watched: newStatus })
@@ -385,7 +385,7 @@ export function RecordList({ records }: { records: Record[] }) {
                       {record.is_watched ? '視聴済み' : '未視聴'}
                     </button>
                     <a
-                      href={`/api/records/${record.filename}?download=true`}
+                      href={`/api/records/${encodeURIComponent(record.filename)}?download=true`}
                       download
                       className="flex-1 sm:flex-none p-2.5 text-slate-400 hover:text-radiko-blue hover:bg-blue-50 rounded-xl transition-all flex items-center justify-center border border-slate-100 sm:border-transparent"
                       title="ダウンロード"

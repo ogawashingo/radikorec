@@ -143,7 +143,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
                         // Don't auto-play, just restore state
                         if (audioRef.current) {
-                            audioRef.current.src = `/api/records/${parsed.record.filename}`;
+                            audioRef.current.src = `/api/records/${encodeURIComponent(parsed.record.filename)}`;
                             audioRef.current.currentTime = parsed.currentTime;
                             audioRef.current.playbackRate = parsed.playbackRate || 1.0;
                         }
@@ -171,7 +171,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
         setCurrentRecord(record);
         if (audioRef.current) {
-            audioRef.current.src = `/api/records/${record.filename}`;
+            audioRef.current.src = `/api/records/${encodeURIComponent(record.filename)}`;
             audioRef.current.playbackRate = playbackRate;
             // Check history
             const historyItem = playbackHistory[record.id];
