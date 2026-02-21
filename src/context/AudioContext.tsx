@@ -143,7 +143,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
                         // Don't auto-play, just restore state
                         if (audioRef.current) {
-                            audioRef.current.src = `/api/records/${encodeURIComponent(parsed.record.filename)}`;
+                            // Ensure the URL is fully query string based
+                            audioRef.current.src = `/api/records?file=${encodeURIComponent(parsed.record.filename)}`;
                             audioRef.current.currentTime = parsed.currentTime;
                             audioRef.current.playbackRate = parsed.playbackRate || 1.0;
                         }
@@ -171,7 +172,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
         setCurrentRecord(record);
         if (audioRef.current) {
-            audioRef.current.src = `/api/records/${encodeURIComponent(record.filename)}`;
+            // Set audio URL using query string file parameter
+            audioRef.current.src = `/api/records?file=${encodeURIComponent(record.filename)}`;
             audioRef.current.playbackRate = playbackRate;
             // Check history
             const historyItem = playbackHistory[record.id];

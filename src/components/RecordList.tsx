@@ -389,7 +389,7 @@ export function RecordList({ records }: { records: Record[] }) {
                       {record.is_watched ? '視聴済み' : '未視聴'}
                     </button>
                     <a
-                      href={`/api/records/${encodeURIComponent(record.filename)}?download=true`}
+                      href={`/api/records?file=${encodeURIComponent(record.filename)}&download=true`}
                       download
                       className="flex-1 sm:flex-none p-2.5 text-slate-400 hover:text-radiko-blue hover:bg-blue-50 rounded-xl transition-all flex items-center justify-center border border-slate-100 sm:border-transparent"
                       title="ダウンロード"

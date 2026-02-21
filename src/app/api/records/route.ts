@@ -5,16 +5,65 @@ import { desc, eq } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const allRecords = drizzleDb.select().from(records).orderBy(desc(records.created_at)).all();
+        const url = new URL(request.url);
+        const fileParam = url.searchParams.get('file');
 
-        // Optional: Verify file existence (might be slow if many files, skipping for now or doing lazily)
+        if (!fileParam) {
+            // No file param, return list of records
+            const allRecords = drizzleDb.select().from(records).orderBy(desc(records.created_at)).all();
+            return NextResponse.json(allRecords);
+        }
 
-        return NextResponse.json(allRecords);
+        // File param exists, stream the file
+        const recordsDir = path.join(process.cwd(), 'public', 'records');
+        const filePath = path.join(recordsDir, fileParam);
+
+        if (!fs.existsSync(filePath)) {
+            return NextResponse.json({ error: 'File not found' }, { status: 404 });
+        }
+
+        const stats = fs.statSync(filePath);
+        const fileSize = stats.size;
+        const range = request.headers.get('range');
+
+        const isDownload = url.searchParams.get('download') === 'true';
+        const encodedFilename = encodeURIComponent(fileParam);
+
+        const headers = new Headers();
+        headers.set('Content-Type', 'audio/mp4');
+        headers.set('Accept-Ranges', 'bytes');
+        headers.set('Content-Disposition', `${isDownload ? 'attachment' : 'inline'}; filename*=UTF-8''${encodedFilename}`);
+
+        if (range && !isDownload) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+            if (start >= fileSize) {
+                return new NextResponse(null, {
+                    status: 416,
+                    headers: { 'Content-Range': `bytes */${fileSize}` }
+                });
+            }
+
+            const chunksize = (end - start) + 1;
+            const file = fs.createReadStream(filePath, { start, end });
+
+            headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+            headers.set('Content-Length', chunksize.toString());
+
+            return new NextResponse(file as unknown as ReadableStream, { status: 206, headers });
+        } else {
+            headers.set('Content-Length', fileSize.toString());
+            const file = fs.createReadStream(filePath);
+            return new NextResponse(file as unknown as ReadableStream, { status: 200, headers });
+        }
+
     } catch (error) {
-        console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to fetch records' }, { status: 500 });
+        console.error('API Error:', error);
+        return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
     }
 }
 
