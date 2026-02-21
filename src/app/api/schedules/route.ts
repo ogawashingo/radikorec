@@ -199,7 +199,7 @@ export async function POST(request: Request) {
     }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE() {
     // クエリパラメータまたは動的ルートで削除を処理する方が通常はクリーンですが、
     // 別ファイルで処理します。
     // [id]ルートをDELETEに使用します。

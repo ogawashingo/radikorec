@@ -18,7 +18,7 @@ export function formatToLateNightTime(dateString: string | null | undefined): st
     if (isNaN(d.getTime())) return dateString;
 
     let displayH = d.getHours();
-    let displayD = new Date(d);
+    const displayD = new Date(d);
 
     // 午前0時〜午前4時の場合は「前日の24時間超え」として表示（例: 25:00等）
     if (displayH < 5) {

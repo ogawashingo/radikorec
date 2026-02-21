@@ -48,3 +48,4 @@ next-env.d.ts
 public/records/*
 !public/records/.gitkeep
 scanner.log
+data/*.log

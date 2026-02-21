@@ -73,12 +73,6 @@ export function initScheduler() {
 
         // One-time processing
         for (const s of pendingSchedules) {
-            // Pending schedule status is "pending", which is compatible with string, but we cast to Schedule to be safe or ensure select returns compatible types
-            // Drizzle returns inferred type which is compatible with Schedule (except status union if we used it strict, but here we just pass s)
-            // Actually pendingSchedules are from DB, so they match InferSelectModel<typeof schedulesTable>
-            // We need to verify if that matches Schedule alias.
-
-            // To be safe we cast s to Schedule (since status in DB is just string)
             const schedule = s as unknown as Schedule;
             if (shouldTrigger(schedule, jstNow)) {
                 targets.push(schedule);
@@ -119,7 +113,7 @@ export function initScheduler() {
             const isRealtime = s.is_realtime === 1;
 
             recordRadiko(s.station_id, s.duration, s.title ?? undefined, s.id, recStartTime, isRealtime)
-                .then((res: any) => {
+                .then((res: { success?: boolean; filename?: string; size?: number; error?: string }) => {
                     logger.info(`Schedule completed: ${s.id}`);
                     if (!s.recurring_pattern) {
                         drizzleDb.update(schedulesTable).set({ status: 'completed', retry_count: 0 }).where(eq(schedulesTable.id, s.id)).run();
@@ -225,7 +219,7 @@ export function shouldTriggerWeekly(s: Schedule, now: Date): boolean {
     const [startH, startM] = timePart.split(':').map(Number); // e.g. "25:30" -> 25, 30
 
     let targetH = startH;
-    let targetM = startM;
+    const targetM = startM;
 
     // Determine effective target hour for TODAY
     if (s.day_of_week !== currentDayOfWeek) {
@@ -254,7 +248,7 @@ export function shouldTriggerWeekly(s: Schedule, now: Date): boolean {
         const triggerTotalMin = endTotalMin + 5; // 5分バッファ
 
         // 日をまたぐ場合の処理 (24 * 60 = 1440)
-        let targetTotalMin = triggerTotalMin % 1440;
+        const targetTotalMin = triggerTotalMin % 1440;
 
         const currentTotalMin = currentHH * 60 + currentMin;
 

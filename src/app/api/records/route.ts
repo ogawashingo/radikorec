@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import { records } from '@/lib/schema';
 import { desc } from 'drizzle-orm';
-import fs from 'fs';
-import path from 'path';
 
 export async function GET() {
     try {

@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { logger } from '@/lib/logger';
+import { format } from 'date-fns';
 
 const AUTH_KEY = 'bcd151073c03b352e1ef2fd66c32209da9ca0afa';
 
@@ -325,8 +326,7 @@ export class RadikoClient {
     }
 
     private formatDateForProgram(d: Date): string {
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        return format(d, 'yyyy-MM-dd HH:mm:ss');
     }
 
     private sanitizeString(val: unknown): string {

@@ -2,7 +2,6 @@ export async function register() {
     if (process.env.NEXT_RUNTIME === 'nodejs') {
         // Node.js 18+ (verified in v22) の fetch 実装における既知の問題への回避策
         // 'ReadableStream is already closed' エラーは無害ですが、プロセスをクラッシュさせるため抑制します
-        const originalConsoleError = console.error;
         const suppressErrors = [
             'ReadableStream is already closed',
             'ERR_INVALID_STATE'

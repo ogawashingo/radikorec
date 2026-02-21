@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Tag, Trash2, Plus, Play, Search, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { SearchResultModal } from '@/components/SearchResultModal';
+import { Tag, Trash2, Plus, Search, Loader2 } from 'lucide-react';
+import { SearchResultModal, SearchProgram } from '@/components/SearchResultModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 interface Keyword {
@@ -17,15 +16,13 @@ interface Keyword {
 export default function KeywordsPage() {
     const [keywords, setKeywords] = useState<Keyword[]>([]);
     const [newKeyword, setNewKeyword] = useState('');
-    const [isScanning, setIsScanning] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [stations, setStations] = useState<{ id: string, name: string }[]>([]);
-    const router = useRouter();
 
     // プレビューロジック
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [previewKeyword, setPreviewKeyword] = useState('');
-    const [previewResults, setPreviewResults] = useState<any[]>([]);
+    const [previewResults, setPreviewResults] = useState<SearchProgram[]>([]);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
     const [previewFilter, setPreviewFilter] = useState<'future' | 'past'>('future');
@@ -92,7 +89,7 @@ export default function KeywordsPage() {
                 body: JSON.stringify({ enabled: newEnabled })
             });
             if (!res.ok) throw new Error('API Error');
-        } catch (error) {
+        } catch {
             fetchKeywords(); // Revert
         }
     };
@@ -109,7 +106,7 @@ export default function KeywordsPage() {
                 body: JSON.stringify({ prevent_duplicates: newValue })
             });
             if (!res.ok) throw new Error('API Error');
-        } catch (error) {
+        } catch {
             fetchKeywords(); // Revert
         }
     };
@@ -133,26 +130,8 @@ export default function KeywordsPage() {
         try {
             const res = await fetch(`/api/keywords/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('API Error');
-        } catch (error) {
+        } catch {
             fetchKeywords(); // Revert on failure
-        }
-    };
-
-    const handleScan = async () => {
-        if (isScanning) return;
-        setIsScanning(true);
-        try {
-            const res = await fetch('/api/keywords/scan', { method: 'POST' });
-            if (res.ok) {
-                alert('スキャンが完了しました。予約リストを確認してください。');
-                router.push('/schedules');
-            } else {
-                alert('スキャンに失敗しました');
-            }
-        } catch (error) {
-            alert('エラーが発生しました');
-        } finally {
-            setIsScanning(false);
         }
     };
 
@@ -177,7 +156,7 @@ export default function KeywordsPage() {
                 alert('検索に失敗しました');
                 setPreviewResults([]);
             }
-        } catch (e) {
+        } catch {
             alert('エラーが発生しました');
             setPreviewResults([]);
         } finally {
@@ -189,14 +168,25 @@ export default function KeywordsPage() {
         handlePreview(previewKeyword, filter);
     };
 
-    const handleReserveSelected = async (selectedPrograms: any[]) => {
+    /**
+     * 重複排除用：番組オブジェクトから予約/ダウンロードに必要な期間(duration)・開始時刻(startTimeStr)を抽出するヘルパー関数
+     */
+    const extractProgramTimeInfo = (p: SearchProgram, isDownload: boolean = false) => {
+        const start = new Date(p.start_time);
+        const end = new Date(p.end_time);
+        const duration = Math.round((end.getTime() - start.getTime()) / 60000);
+
+        // 予約用は 16文字(YYYY-MM-DDTHH:mm), ダウンロード用は 19文字のフォーマットで扱うという元の実装を尊重
+        const substringLength = isDownload ? 19 : 16;
+        const startTimeStr = p.start_time.replace(' ', 'T').substring(0, substringLength);
+
+        return { duration, startTimeStr };
+    }
+
+    const handleReserveSelected = async (selectedPrograms: SearchProgram[]) => {
         try {
             const schedules = selectedPrograms.map(p => {
-                const start = new Date(p.start_time);
-                const end = new Date(p.end_time);
-                const duration = Math.round((end.getTime() - start.getTime()) / 60000);
-                // JST文字列ハック (API用)
-                const startTimeStr = p.start_time.replace(' ', 'T').substring(0, 16);
+                const { duration, startTimeStr } = extractProgramTimeInfo(p, false);
 
                 return {
                     station_id: p.station_id,
@@ -249,20 +239,17 @@ export default function KeywordsPage() {
                 const data = await res.json().catch(() => ({}));
                 alert(`予約の追加に失敗しました: ${data.error || '不明なエラー'}`);
             }
-        } catch (e) {
+        } catch {
             alert('エラーが発生しました');
         }
     };
 
-    const handleDownloadSelected = async (selectedPrograms: any[]) => {
+    const handleDownloadSelected = async (selectedPrograms: SearchProgram[]) => {
         try {
             // シリアルに実行、または並列実行
             let successCount = 0;
             for (const p of selectedPrograms) {
-                const start = new Date(p.start_time);
-                const end = new Date(p.end_time);
-                const duration = Math.round((end.getTime() - start.getTime()) / 60000);
-                const startTimeStr = p.start_time.replace(' ', 'T').substring(0, 19); // ISO format roughly or "YYYY-MM-DDTHH:mm:ss"
+                const { duration, startTimeStr } = extractProgramTimeInfo(p, true);
 
                 const res = await fetch('/api/records/download', {
                     method: 'POST',

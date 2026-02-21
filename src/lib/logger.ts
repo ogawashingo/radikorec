@@ -8,7 +8,7 @@ const dataDir = path.join(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
     try {
         fs.mkdirSync(dataDir, { recursive: true });
-    } catch (e) {
+    } catch {
         // ディレクトリ作成に失敗しても処理は続行
     }
 }

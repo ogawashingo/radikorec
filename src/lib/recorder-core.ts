@@ -5,6 +5,7 @@ import { logger } from './logger';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { format } from 'date-fns';
 
 export class RadikoRecorder {
     private client: RadikoClient;
@@ -14,13 +15,7 @@ export class RadikoRecorder {
     }
 
     private formatRadikoDate(date: Date): string {
-        const Y = date.getFullYear();
-        const M = String(date.getMonth() + 1).padStart(2, '0');
-        const D = String(date.getDate()).padStart(2, '0');
-        const h = String(date.getHours()).padStart(2, '0');
-        const m = String(date.getMinutes()).padStart(2, '0');
-        const s = String(date.getSeconds()).padStart(2, '0');
-        return `${Y}${M}${D}${h}${m}${s}`;
+        return format(date, 'yyyyMMddHHmmss');
     }
 
     private getLsid(): string {

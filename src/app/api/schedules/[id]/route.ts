@@ -17,7 +17,7 @@ export async function GET(
         }
 
         return NextResponse.json(schedule);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to fetch schedule' }, { status: 500 });
     }
 }

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Sidebar } from "@/components/Sidebar";
-import { Menu, X, Radio } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import Image from 'next/image';
 import { AudioProvider } from '@/context/AudioContext';
 import { PersistentPlayer } from '@/components/PersistentPlayer';
 import { DownloadStatus } from '@/components/DownloadStatus';
@@ -19,7 +20,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                     {/* Mobile Header */}
                     <header className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 shrink-0">
                         <div className="flex items-center space-x-2">
-                            <img src="/logo.png" alt="radikoRec" className="h-12 w-auto" />
+                            <Image src="/logo.png" alt="radikoRec" width={120} height={48} className="h-12 w-auto" />
                         </div>
                         <button
                             onClick={() => setIsSidebarOpen(true)}

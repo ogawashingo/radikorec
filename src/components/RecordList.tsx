@@ -20,7 +20,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 
 export function RecordList({ records }: { records: Record[] }) {
   const router = useRouter();
-  const { currentRecord, isPlaying, playRecord, togglePlay, playbackHistory, currentTime, duration } = useAudio();
+  const { currentRecord, isPlaying, playRecord, playbackHistory, currentTime, duration } = useAudio();
   const [optimisticRecords, setOptimisticRecords] = useState(records);
   const [stations, setStations] = useState<{ id: string, name: string }[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('start_time');
@@ -71,8 +71,8 @@ export function RecordList({ records }: { records: Record[] }) {
   const sortedAndGroupedRecords = useMemo(() => {
     // 1. まず全レコードをソート
     const sorted = [...optimisticRecords].sort((a, b) => {
-      let valA: any = a[sortKey] ?? '';
-      let valB: any = b[sortKey] ?? '';
+      let valA: unknown = a[sortKey] ?? '';
+      let valB: unknown = b[sortKey] ?? '';
 
       // 特殊な値の処理
       if (sortKey === 'start_time') {

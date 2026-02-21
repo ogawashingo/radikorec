@@ -7,7 +7,7 @@ interface LogEntry {
     time: string;
     level: number;
     msg: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 const levelMap: Record<number, { label: string, color: string }> = {
@@ -75,7 +75,7 @@ export function LogViewer() {
                             <span className="text-slate-200 break-all">{log.msg}</span>
                             {Object.keys(log).filter(k => !['time', 'level', 'msg', 'env', 'v'].includes(k)).map(k => (
                                 <span key={k} className="text-slate-400 italic">
-                                    {k}={typeof log[k] === 'object' ? JSON.stringify(log[k]) : log[k]}
+                                    {k}={typeof log[k] === 'object' && log[k] !== null ? JSON.stringify(log[k]) : String(log[k])}
                                 </span>
                             ))}
                         </div>

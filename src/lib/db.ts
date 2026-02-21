@@ -20,11 +20,18 @@ import { logger } from '@/lib/logger';
 
 export const drizzleDb = drizzle(db, { schema });
 
-// マイグレーション実行
-try {
-  migrate(drizzleDb, { migrationsFolder: './drizzle' });
-  logger.info('Database migrations completed successfully.');
-} catch (error) {
-  logger.error({ error }, 'Database migration failed:');
+// 開発中のHMRによる複数回マイグレーション実行を防ぐ
+declare global {
+  var isMigrated: boolean | undefined;
 }
 
+if (!globalThis.isMigrated) {
+  // マイグレーション実行
+  try {
+    migrate(drizzleDb, { migrationsFolder: './drizzle' });
+    logger.info('Database migrations completed successfully.');
+    globalThis.isMigrated = true;
+  } catch (error) {
+    logger.error({ error }, 'Database migration failed:');
+  }
+}

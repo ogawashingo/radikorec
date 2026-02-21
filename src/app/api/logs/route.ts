@@ -19,13 +19,13 @@ export async function GET() {
         const logs = lines.map(line => {
             try {
                 return JSON.parse(line);
-            } catch (e) {
+            } catch {
                 return { msg: line, time: new Date().toISOString(), level: 30 };
             }
         });
 
         return NextResponse.json({ logs });
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to read logs' }, { status: 500 });
+    } catch {
+        return NextResponse.json({ error: 'Failed to fetch logs' }, { status: 500 });
     }
 }

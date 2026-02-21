@@ -18,7 +18,6 @@ interface AudioContextType {
 }
 
 const STORAGE_KEY = 'radiko_player_state';
-const HISTORY_KEY = 'radiko_player_history';
 
 interface HistoryItem {
     currentTime: number;
@@ -40,8 +39,36 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [playbackRate, setPlaybackRate] = useState(1);
-    const [playbackHistory, setPlaybackHistory] = useState<Record<string, HistoryItem>>({});
+    const [playbackHistory] = useState<Record<string, HistoryItem>>({});
     const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    const togglePlay = React.useCallback(() => {
+        if (!audioRef.current || !currentRecord) return;
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play();
+        }
+    }, [audioRef, currentRecord, isPlaying]);
+
+    const seek = React.useCallback((time: number) => {
+        if (!audioRef.current) return;
+        audioRef.current.currentTime = time;
+        setCurrentTime(time);
+    }, [audioRef]);
+
+    const skip = React.useCallback((seconds: number) => {
+        if (!audioRef.current) return;
+        const newTime = Math.max(0, Math.min(audioRef.current.duration, audioRef.current.currentTime + seconds));
+        seek(newTime);
+    }, [audioRef, seek]);
+
+    const setRate = (rate: number) => {
+        setPlaybackRate(rate);
+        if (audioRef.current) {
+            audioRef.current.playbackRate = rate;
+        }
+    };
 
     useEffect(() => {
         // Keyboard shortcuts
@@ -69,7 +96,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentRecord, isPlaying]);
+    }, [currentRecord, isPlaying, skip, togglePlay]);
 
     // Cleanup and Event Listeners
     useEffect(() => {
@@ -103,22 +130,24 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         audio.addEventListener('play', handlePlay);
         audio.addEventListener('pause', handlePause);
 
-        // Restore state on mount
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved && !currentRecord) {
             try {
                 const parsed: PlayerState = JSON.parse(saved);
                 if (parsed.record && parsed.record.id) {
-                    setCurrentRecord(parsed.record);
-                    setPlaybackRate(parsed.playbackRate || 1.0);
-                    setCurrentTime(parsed.currentTime || 0);
+                    // setTimeoutで次のTickに回すことで、synchronous setState warningを回避
+                    setTimeout(() => {
+                        setCurrentRecord(parsed.record);
+                        setPlaybackRate(parsed.playbackRate || 1.0);
+                        setCurrentTime(parsed.currentTime || 0);
 
-                    // Don't auto-play, just restore state
-                    if (audioRef.current) {
-                        audioRef.current.src = `/api/records/${parsed.record.filename}`;
-                        audioRef.current.currentTime = parsed.currentTime;
-                        audioRef.current.playbackRate = parsed.playbackRate || 1.0;
-                    }
+                        // Don't auto-play, just restore state
+                        if (audioRef.current) {
+                            audioRef.current.src = `/api/records/${parsed.record.filename}`;
+                            audioRef.current.currentTime = parsed.currentTime;
+                            audioRef.current.playbackRate = parsed.playbackRate || 1.0;
+                        }
+                    }, 0);
                 }
             } catch (e) {
                 console.error('Failed to restore player state', e);
@@ -156,48 +185,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const updateHistory = (id: string, time: number, dur: number) => {
-        setPlaybackHistory(prev => {
-            const next = {
-                ...prev,
-                [id]: {
-                    currentTime: time,
-                    duration: dur,
-                    updatedAt: Date.now()
-                }
-            };
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
-            return next;
-        });
-    };
 
-    const togglePlay = () => {
-        if (!audioRef.current || !currentRecord) return;
-        if (isPlaying) {
-            audioRef.current.pause();
-        } else {
-            audioRef.current.play();
-        }
-    };
-
-    const seek = (time: number) => {
-        if (!audioRef.current) return;
-        audioRef.current.currentTime = time;
-        setCurrentTime(time);
-    };
-
-    const skip = (seconds: number) => {
-        if (!audioRef.current) return;
-        const newTime = Math.max(0, Math.min(audioRef.current.duration, audioRef.current.currentTime + seconds));
-        seek(newTime);
-    };
-
-    const setRate = (rate: number) => {
-        setPlaybackRate(rate);
-        if (audioRef.current) {
-            audioRef.current.playbackRate = rate;
-        }
-    };
 
     return (
         <AudioContext.Provider value={{

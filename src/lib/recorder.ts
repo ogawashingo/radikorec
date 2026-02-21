@@ -80,8 +80,9 @@ export async function recordRadiko(stationId: string, durationMin: number, title
             return { success: true, filename, error: 'DB Insert Failed' };
         }
 
-    } catch (error: any) {
-        logger.error(`録音に失敗しました: ${error.message}`);
+    } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger.error(`録音に失敗しました: ${errorMsg}`);
         throw error;
     }
 }

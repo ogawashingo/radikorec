@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Calendar, Clock, Check, Loader2 } from 'lucide-react';
+import { X, Calendar, Check, Loader2 } from 'lucide-react';
 
-interface Program {
+export interface SearchProgram {
     title: string;
     start_time: string;
     end_time: string;
@@ -18,10 +18,10 @@ interface SearchResultModalProps {
     isOpen: boolean;
     onClose: () => void;
     keyword: string;
-    results: Program[];
+    results: SearchProgram[];
     stations: { id: string, name: string }[];
-    onReserve: (selected: Program[]) => Promise<void>;
-    onDownload: (selected: Program[]) => Promise<void>;
+    onReserve: (selected: SearchProgram[]) => Promise<void>;
+    onDownload: (selected: SearchProgram[]) => Promise<void>;
     currentFilter: 'future' | 'past';
     onFilterChange: (filter: 'future' | 'past') => void;
     isLoading: boolean;

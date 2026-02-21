@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-export async function sendDiscordNotification(content: string, embed?: any) {
+export async function sendDiscordNotification(content: string, embed?: Record<string, unknown>) {
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
     if (!webhookUrl) {
         logger.warn('DISCORD_WEBHOOK_URL is not set. Skipping notification.');
@@ -7,7 +7,7 @@ export async function sendDiscordNotification(content: string, embed?: any) {
     }
 
     try {
-        const body: any = { content };
+        const body: Record<string, unknown> = { content };
         if (embed) {
             body.embeds = [embed];
         }

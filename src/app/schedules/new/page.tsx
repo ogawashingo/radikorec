@@ -36,12 +36,8 @@ export default function NewSchedulePage() {
     const router = useRouter();
     const [title, setTitle] = useState("");
     const [stationId, setStationId] = useState("");
-    const [date, setDate] = useState<Date | undefined>(undefined);
+    const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState("");
-
-    useEffect(() => {
-        setDate(new Date());
-    }, []);
     const [duration, setDuration] = useState("60");
     const [isWeekly, setIsWeekly] = useState(false);
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -57,7 +53,7 @@ export default function NewSchedulePage() {
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
-                    setStations(data);
+                    setTimeout(() => setStations(data), 0);
                 }
             })
             .catch(err => console.error("Failed to fetch stations:", err));
@@ -66,7 +62,7 @@ export default function NewSchedulePage() {
     // 放送局または日付が変更されたときに番組を取得
     useEffect(() => {
         if (!stationId) {
-            setAvailablePrograms([]);
+            setTimeout(() => setAvailablePrograms([]), 0);
             return;
         }
 
@@ -101,7 +97,7 @@ export default function NewSchedulePage() {
         }
 
         if (!referenceDate) {
-            setAvailablePrograms([]);
+            setTimeout(() => setAvailablePrograms([]), 0);
             return;
         }
 
@@ -110,7 +106,7 @@ export default function NewSchedulePage() {
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
-                    setAvailablePrograms(data);
+                    setTimeout(() => setAvailablePrograms(data), 0);
                 }
             })
             .catch(err => console.error('Failed to fetch programs:', err));
@@ -119,7 +115,7 @@ export default function NewSchedulePage() {
     // タイトル入力に基づいて番組をフィルタリング
     useEffect(() => {
         if (!title.trim() || availablePrograms.length === 0) {
-            setFilteredPrograms([]);
+            setTimeout(() => setFilteredPrograms([]), 0);
             return;
         }
 
@@ -130,7 +126,7 @@ export default function NewSchedulePage() {
             (p.info || "").toLowerCase().includes(query) ||
             (p.desc || "").toLowerCase().includes(query)
         );
-        setFilteredPrograms(filtered);
+        setTimeout(() => setFilteredPrograms(filtered), 0);
     }, [title, availablePrograms]);
 
     const handleSelectProgram = (p: Program) => {
@@ -218,7 +214,6 @@ export default function NewSchedulePage() {
                 const daysUntil = (dayId - today.getDay() + 7) % 7 || 7;
                 const nextOccurrence = new Date(today);
                 nextOccurrence.setDate(today.getDate() + daysUntil);
-                const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
                 // For weekly, we just want the time string (e.g. "25:30")
                 // But previously we sent ISO.
                 // Now we send "HH:mm" (or "25:30") directly.
@@ -235,10 +230,9 @@ export default function NewSchedulePage() {
                 });
             }
         } else {
-            // 単発予約
             // 入力された時間が 24:00 を超えている場合 (例: 25:30)
             // 日付を翌日に進めて、時刻を 01:30 に正規化する
-            let targetDate = new Date(date!);
+            const targetDate = new Date(date!);
             const [hStr, mStr] = time.split(':');
             let h = parseInt(hStr);
             const m = parseInt(mStr);

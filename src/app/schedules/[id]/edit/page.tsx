@@ -229,8 +229,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         e.preventDefault();
         setIsLoading(true);
 
-        // Format start_time for API
-        let startTimePayload: string;
+        // Format start_time for API (Not assigned to unused variable anymore)
         if (isWeekly) {
             // For weekly schedules, use a placeholder date (next occurrence of the selected day)
             if (selectedDays.length === 0) {
@@ -243,8 +242,6 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
             const daysUntil = (targetDay - today.getDay() + 7) % 7 || 7;
             const nextOccurrence = new Date(today);
             nextOccurrence.setDate(today.getDate() + daysUntil);
-            const dateStr = nextOccurrence.toLocaleDateString('sv-SE');
-            startTimePayload = `${dateStr}T${time}`;
         } else {
             // For one-time schedules, use the selected date
             if (!date) {
@@ -252,8 +249,6 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                 setIsLoading(false);
                 return;
             }
-            const dateStr = date.toLocaleDateString('sv-SE');
-            startTimePayload = `${dateStr}T${time}`;
         }
 
         try {
@@ -267,7 +262,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                 primaryStartTime = time;
             } else {
                 // One-time: Normalize to Next Day if >= 24h
-                let targetDate = new Date(date!);
+                const targetDate = new Date(date!);
                 const [hStr, mStr] = time.split(':');
                 let h = parseInt(hStr);
                 const m = parseInt(mStr);

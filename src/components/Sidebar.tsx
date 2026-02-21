@@ -1,8 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Radio, Calendar, FileAudio, Settings, Home, Search } from 'lucide-react';
-import { clsx } from 'clsx';
+import Image from 'next/image';
+import { Calendar, FileAudio, Home, Search } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
 const navItems = [
@@ -38,7 +38,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             )}>
                 <div className="p-6 flex items-center justify-between border-b border-slate-100">
                     <div className="flex items-center space-x-2">
-                        <img src="/logo.png" alt="radikoRec" className="h-16 w-auto" />
+                        <Image src="/logo.png" alt="radikoRec" width={160} height={64} className="h-16 w-auto" />
                     </div>
                 </div>
                 <nav className="flex-1 p-4 space-y-2">

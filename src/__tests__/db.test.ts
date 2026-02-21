@@ -1,11 +1,8 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as schema from '../lib/schema';
 import { eq } from 'drizzle-orm';
-import fs from 'fs';
-import path from 'path';
 
 describe('Drizzle ORM Integration Tests', () => {
     let sqlite: Database.Database;

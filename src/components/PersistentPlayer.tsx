@@ -18,15 +18,19 @@ export function PersistentPlayer() {
         setRate
     } = useAudio();
 
-    const [isVisible, setIsVisible] = useState(false);
+    // ローカルで閉じたかどうかを管理する状態
+    const [isClosed, setIsClosed] = useState(false);
 
+    // currentRecord が変わったら再度表示
     useEffect(() => {
-        if (currentRecord) {
-            setIsVisible(true);
-        }
-    }, [currentRecord]);
+        const timer = setTimeout(() => setIsClosed(false), 0);
+        return () => clearTimeout(timer);
+    }, [currentRecord?.id]);
 
-    if (!currentRecord || !isVisible) return null;
+    // currentRecord がない場合は表示しない
+    if (!currentRecord) return null;
+
+    if (isClosed) return null;
 
     const formatTime = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
@@ -130,7 +134,7 @@ export function PersistentPlayer() {
                         </button>
 
                         <button
-                            onClick={() => setIsVisible(false)}
+                            onClick={() => setIsClosed(true)}
                             className="p-2 text-slate-300 hover:text-red-400 transition-colors ml-2"
                         >
                             <X className="w-5 h-5" />

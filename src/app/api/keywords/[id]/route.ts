@@ -13,7 +13,7 @@ export async function DELETE(
     try {
         drizzleDb.delete(keywords).where(eq(keywords.id, Number(id))).run();
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to delete keyword' }, { status: 500 });
     }
 }
@@ -37,8 +37,8 @@ export async function PUT(
                 .where(eq(keywords.id, Number(id)))
                 .run();
         }
-        return NextResponse.json({ success: true });
-    } catch (error) {
+        return NextResponse.json({ success: true, ...body });
+    } catch {
         return NextResponse.json({ error: 'Failed to update keyword' }, { status: 500 });
     }
 }
