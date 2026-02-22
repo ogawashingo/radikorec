@@ -1,64 +1,8 @@
 import { NextResponse } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import { schedules } from '@/lib/schema';
-import { desc, sql } from 'drizzle-orm';
-import {
-    getEffectiveDayTimesFromOneTime,
-    getEffectiveDayTimesFromWeekly,
-    isAnyDayTimeMatch,
-} from '@/lib/schedule-utils';
-
-/**
- * クロスタイプの重複チェック（ワンタイム ↔ 毎週予約間の照合）
- * ラジオ日表記（前日24:00+）も考慮して、複数の表現でマッチングを行う。
- * 重複が見つかった場合、既存予約のタイトルを返す。なければ null。
- */
-function checkCrossTypeDuplicate(
-    stationId: string,
-    startTime: string,
-    recurringPattern: string | null,
-    dayOfWeek: number | null,
-): string | null {
-    if (recurringPattern === 'weekly' && dayOfWeek !== null) {
-        // 毎週予約の作成 → 既存のワンタイム予約（pending）と照合
-        const newDayTimes = getEffectiveDayTimesFromWeekly(dayOfWeek, startTime);
-
-        const onetimeSchedules = drizzleDb.select({
-            start_time: schedules.start_time,
-            title: schedules.title,
-        }).from(schedules).where(
-            sql`${schedules.station_id} = ${stationId} AND ${schedules.recurring_pattern} IS NULL AND ${schedules.status} = 'pending'`
-        ).all();
-
-        for (const s of onetimeSchedules) {
-            const existingDayTimes = getEffectiveDayTimesFromOneTime(s.start_time);
-            if (isAnyDayTimeMatch(newDayTimes, existingDayTimes)) {
-                return s.title || '無題の番組';
-            }
-        }
-    } else {
-        // ワンタイム予約の作成 → 既存の毎週予約と照合
-        const newDayTimes = getEffectiveDayTimesFromOneTime(startTime);
-
-        const weeklySchedules = drizzleDb.select({
-            start_time: schedules.start_time,
-            day_of_week: schedules.day_of_week,
-            title: schedules.title,
-        }).from(schedules).where(
-            sql`${schedules.station_id} = ${stationId} AND ${schedules.recurring_pattern} = 'weekly'`
-        ).all();
-
-        for (const s of weeklySchedules) {
-            if (s.day_of_week === null) continue;
-            const existingDayTimes = getEffectiveDayTimesFromWeekly(s.day_of_week, s.start_time);
-            if (isAnyDayTimeMatch(newDayTimes, existingDayTimes)) {
-                return s.title || '無題の番組';
-            }
-        }
-    }
-
-    return null;
-}
+import { desc } from 'drizzle-orm';
+import { checkCrossTypeDuplicate, checkSameTypeDuplicate } from '@/lib/schedules-service';
 
 export async function GET() {
     try {
@@ -87,11 +31,9 @@ export async function POST(request: Request) {
                 if (!station_id || !start_time || !duration) continue;
 
                 // 同型の重複チェック: 同じ放送局かつ開始時間が2分以内の予約が存在するか確認
-                const existing = drizzleDb.select({ id: schedules.id }).from(schedules)
-                    .where(sql`${schedules.station_id} = ${station_id} AND abs(strftime('%s', ${schedules.start_time}) - strftime('%s', ${start_time})) < 120`)
-                    .get();
+                const isDuplicate = checkSameTypeDuplicate(station_id, start_time);
 
-                if (existing) {
+                if (isDuplicate) {
                     skippedCount++;
                     continue; // 重複をスキップ
                 }
@@ -156,11 +98,9 @@ export async function POST(request: Request) {
         }
 
         // 同型の重複チェック
-        const existing = drizzleDb.select({ id: schedules.id }).from(schedules)
-            .where(sql`${schedules.station_id} = ${station_id} AND abs(strftime('%s', ${schedules.start_time}) - strftime('%s', ${start_time})) < 120`)
-            .get();
+        const isDuplicate = checkSameTypeDuplicate(station_id, start_time);
 
-        if (existing) {
+        if (isDuplicate) {
             return NextResponse.json({ error: 'Duplicate schedule' }, { status: 409 });
         }
 

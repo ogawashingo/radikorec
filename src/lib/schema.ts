@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const schedules = sqliteTable('schedules', {
@@ -15,6 +15,11 @@ export const schedules = sqliteTable('schedules', {
     created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
     is_realtime: integer('is_realtime').default(0).notNull(),
     retry_count: integer('retry_count').default(0).notNull(),
+}, (table) => {
+    return {
+        statusIdx: index('status_idx').on(table.status),
+        stationIdIdx: index('station_id_idx').on(table.station_id)
+    };
 });
 
 export const records = sqliteTable('records', {
@@ -36,4 +41,8 @@ export const keywords = sqliteTable('keywords', {
     enabled: integer('enabled').default(1).notNull(),
     prevent_duplicates: integer('prevent_duplicates').default(1).notNull(),
     created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => {
+    return {
+        enabledIdx: index('enabled_idx').on(table.enabled)
+    };
 });
