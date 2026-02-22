@@ -14,7 +14,8 @@ WORKDIR /app
 
 # 依存パッケージのインストール
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # ソースコードのビルド
 FROM base AS builder
@@ -25,7 +26,18 @@ COPY . .
 # テレメトリの無効化
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
+
+# pino などの依存関係を standalone フォルダに集約してレイヤー数を削減
+# standalone ビルドではコピー漏れが発生するため手動でコピーする
+RUN mkdir -p .next/standalone/node_modules && \
+    for pkg in pino pino-pretty thread-stream sonic-boom atomic-sleep on-exit-leak-free \
+    quick-format-unescaped real-require pino-std-serializers process-warning \
+    safe-stable-stringify @pinojs split2 colorette dateformat fast-copy \
+    fast-safe-stringify help-me joycon minimist pump secure-json-parse strip-json-comments; do \
+      cp -r node_modules/$pkg .next/standalone/node_modules/ || true; \
+    done
 
 # 本番用イメージ
 FROM base AS runner
@@ -46,7 +58,7 @@ COPY --from=mwader/static-ffmpeg:6.1 /ffprobe /usr/local/bin/
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+COPY public ./public
 
 # プリレンダリングキャッシュ設定
 RUN mkdir .next
@@ -56,33 +68,7 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# pino は内部で worker_threads を使用し、動的にモジュールを読み込むため、
-# Next.js の standalone トレーサーでは依存関係が正しくコピーされない。
-# pino / pino-pretty の全依存を builder ステージから明示的にコピーする。
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pino ./node_modules/pino
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pino-pretty ./node_modules/pino-pretty
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/thread-stream ./node_modules/thread-stream
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/sonic-boom ./node_modules/sonic-boom
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/atomic-sleep ./node_modules/atomic-sleep
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/on-exit-leak-free ./node_modules/on-exit-leak-free
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/quick-format-unescaped ./node_modules/quick-format-unescaped
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/real-require ./node_modules/real-require
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pino-std-serializers ./node_modules/pino-std-serializers
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/process-warning ./node_modules/process-warning
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/safe-stable-stringify ./node_modules/safe-stable-stringify
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@pinojs ./node_modules/@pinojs
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/split2 ./node_modules/split2
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/colorette ./node_modules/colorette
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dateformat ./node_modules/dateformat
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/fast-copy ./node_modules/fast-copy
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/fast-safe-stringify ./node_modules/fast-safe-stringify
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/help-me ./node_modules/help-me
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/joycon ./node_modules/joycon
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/minimist ./node_modules/minimist
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pump ./node_modules/pump
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/secure-json-parse ./node_modules/secure-json-parse
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/strip-json-comments ./node_modules/strip-json-comments
 
 # 録音用ディレクトリとデータ用ディレクトリの作成
 RUN mkdir -p records data && chown nextjs:nodejs records data
