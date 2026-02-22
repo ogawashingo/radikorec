@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { format, getHours, getMinutes, getDay } from 'date-fns';
+import { format, getHours, getMinutes, getDay, addMinutes, differenceInMinutes } from 'date-fns';
 import { drizzleDb } from '@/lib/db';
 import { schedules as schedulesTable } from '@/lib/schema';
 import { eq, and, isNull, lte, inArray } from 'drizzle-orm';
@@ -73,7 +73,7 @@ export function initScheduler() {
 
         // ワンタイム予約の処理
         for (const s of pendingSchedules) {
-            const schedule = s as unknown as Schedule;
+            const schedule = s as Schedule;
             if (shouldTrigger(schedule, jstNow)) {
                 targets.push(schedule);
             }
@@ -81,7 +81,7 @@ export function initScheduler() {
 
         // 毎週予約の処理
         for (const s of weeklySchedules) {
-            const schedule = s as unknown as Schedule;
+            const schedule = s as Schedule;
             if (shouldTriggerWeekly(schedule, jstNow)) {
                 targets.push(schedule);
             }
@@ -181,7 +181,6 @@ export function initScheduler() {
 
 export function shouldTrigger(s: Schedule, now: Date): boolean {
     const isRealtime = s.is_realtime === 1;
-    const nowStr = format(now, "yyyy-MM-dd'T'HH:mm");
 
     // ワンタイムは start_time = YYYY-MM-DDTHH:mm
     if (isRealtime) {
@@ -193,17 +192,12 @@ export function shouldTrigger(s: Schedule, now: Date): boolean {
         // タイムフリー: 終了時刻 + 5分後くらいに実行
         // start_time から duration を足して終了時刻を計算
         const start = new Date(s.start_time);
-        const end = new Date(start.getTime() + s.duration * 60000);
         // バッファ 5分 (radiko側の生成待ち時間を考慮して長めに)
-        const triggerTime = new Date(end.getTime() + 5 * 60000);
-
-        // トリガー時刻を "HH:mm" で比較するのは難しいので、分単位の差分で見る
-        // 現在時刻とトリガー時刻が「同じ分」であれば実行
-        const current = new Date(nowStr);
+        const triggerTime = addMinutes(start, s.duration + 5);
 
         // 差分が 0〜1分以内なら実行
-        const diff = (current.getTime() - triggerTime.getTime()) / 60000;
-        return diff >= 0 && diff < 2; // 実行ウィンドウは同様
+        const diff = differenceInMinutes(now, triggerTime);
+        return diff >= 0 && diff < 2; // 0または1分以内なら実行
     }
 }
 
@@ -243,15 +237,9 @@ export function shouldTriggerWeekly(s: Schedule, now: Date): boolean {
         return targetH === currentHH && targetM === currentMin;
     } else {
         // タイムフリー: (開始 + 時間 + 5分) と一致したら実行
-        const startTotalMin = targetH * 60 + targetM;
-        const endTotalMin = startTotalMin + s.duration;
-        const triggerTotalMin = endTotalMin + 5; // 5分バッファ
+        const baseDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetH, targetM);
+        const triggerDate = addMinutes(baseDate, s.duration + 5);
 
-        // 日をまたぐ場合の処理 (24 * 60 = 1440)
-        const targetTotalMin = triggerTotalMin % 1440;
-
-        const currentTotalMin = currentHH * 60 + currentMin;
-
-        return targetTotalMin === currentTotalMin;
+        return currentHH === getHours(triggerDate) && currentMin === getMinutes(triggerDate);
     }
 }
