@@ -77,7 +77,7 @@ export async function DELETE(request: Request) {
             try {
                 const body = await request.json();
                 filename = body.filename;
-            } catch (e) {
+            } catch {
                 // Ignore JSON parse errors if we don't have a body
             }
         }

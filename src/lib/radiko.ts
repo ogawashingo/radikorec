@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { logger } from '@/lib/logger';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 
 const AUTH_KEY = 'bcd151073c03b352e1ef2fd66c32209da9ca0afa';
 
@@ -46,7 +46,16 @@ export class RadikoClient {
     private tokenExpiresAt: number = 0;
     private parser = new XMLParser({
         ignoreAttributes: false,
-        attributeNamePrefix: "@_"
+        attributeNamePrefix: "@_",
+        isArray: (name, jpath) => {
+            const arrayPaths = [
+                'urls.url',
+                'radiko.stations.station.scd.progs.prog',
+                'region.stations',
+                'region.stations.station'
+            ];
+            return arrayPaths.includes(jpath);
+        }
     });
 
     async getAuthToken(forceRefresh = false): Promise<RadikoAuthResult> {
@@ -203,8 +212,8 @@ export class RadikoClient {
         const xml = await res.text();
         const jsonObj = this.parser.parse(xml);
 
-        // jsonObj.urls.url は配列の場合とオブジェクトの場合がある
-        const urls = Array.isArray(jsonObj.urls?.url) ? jsonObj.urls.url : [jsonObj.urls?.url].filter(Boolean);
+        // isArray オプションを利用しているため確実に配列としてパースされる
+        const urls = jsonObj.urls?.url || [];
         return urls as StreamUrl[];
     }
 
@@ -278,9 +287,7 @@ export class RadikoClient {
         const station = jsonObj.radiko?.stations?.station;
         if (!station) return [];
 
-        const progs = Array.isArray(station.scd?.progs?.prog)
-            ? station.scd.progs.prog as RadikoProg[]
-            : ([station.scd?.progs?.prog].filter(Boolean) as RadikoProg[]);
+        const progs = (station.scd?.progs?.prog || []) as RadikoProg[];
 
         for (const prog of progs) {
             const ft = prog['@_ft'];
@@ -288,25 +295,16 @@ export class RadikoClient {
 
             if (!ft) continue;
 
-            // 時間フォーマット YYYYMMDDHHMMSS からパース
+            // 時間フォーマット YYYYMMDDHHMMSS から date-fns でパース
             const progDateStr = ft.substring(0, 8);
-            const hours = parseInt(ft.substring(8, 10));
-            const minutes = ft.substring(10, 12);
+            const startObj = parse(ft, 'yyyyMMddHHmmss', new Date());
 
-            let displayHours = hours;
+            let displayHours = startObj.getHours();
             // リクエストされた日付より翌日の場合、24時間表記に加算 (25:00等)
             if (progDateStr > date) {
                 displayHours += 24;
             }
-
-            const startObj = new Date(
-                parseInt(ft.substring(0, 4)),
-                parseInt(ft.substring(4, 6)) - 1,
-                parseInt(ft.substring(6, 8)),
-                parseInt(ft.substring(8, 10)),
-                parseInt(ft.substring(10, 12)),
-                parseInt(ft.substring(12, 14))
-            );
+            const minutes = String(startObj.getMinutes()).padStart(2, '0');
             const durationSec = parseInt(dur, 10);
             const endObj = new Date(startObj.getTime() + durationSec * 1000);
 
@@ -348,16 +346,12 @@ export class RadikoClient {
         const jsonObj = this.parser.parse(xml);
 
         // XMLの構造: region > stations[] > station[]
-        const regionNodes = Array.isArray(jsonObj.region?.stations)
-            ? jsonObj.region.stations
-            : [jsonObj.region?.stations].filter(Boolean);
+        const regionNodes = jsonObj.region?.stations || [];
 
         const stations: { id: string, name: string }[] = [];
 
         for (const region of regionNodes) {
-            const stationNodes = Array.isArray(region.station)
-                ? region.station
-                : [region.station].filter(Boolean);
+            const stationNodes = region.station || [];
 
             for (const s of stationNodes) {
                 stations.push({
