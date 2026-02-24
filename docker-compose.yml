@@ -11,6 +11,6 @@ services:
     env_file:
       - .env
     volumes:
-      - ./public/records:/app/public/records
-      - ./data:/app/data
-      - ./.env:/app/.env
+      - ./public/records:/app/public/records:z
+      - ./data:/app/data:z
+      - ./.env:/app/.env:z
