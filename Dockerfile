@@ -67,6 +67,7 @@ RUN chown nextjs:nodejs .next
 # スタンドアロン出力の使用
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --chown=nextjs:nodejs start-server.js ./
 
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 
@@ -82,4 +83,4 @@ EXPOSE 3000
 
 ENV PORT 3000
 
-CMD ["node", "server.js"]
+CMD ["node", "start-server.js"]
