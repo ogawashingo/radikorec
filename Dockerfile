@@ -73,6 +73,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 # 録音用ディレクトリとデータ用ディレクトリの作成
 RUN mkdir -p records data && chown nextjs:nodejs records data
 
+# キャッシュ作成時の権限エラー（EACCES）を回避するため、.next 配下に誰でも書き込めるよう権限設定
+RUN mkdir -p .next/cache && chown nextjs:nodejs .next/cache && chmod -R 777 .next/cache && chmod 777 .next
+
 USER nextjs
 
 EXPOSE 3000
