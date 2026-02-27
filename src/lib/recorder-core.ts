@@ -147,6 +147,7 @@ export class RadikoRecorder {
                     '-reconnect_delay_max', '5',
                     '-seekable', '0',
                     '-i', fullUrl,
+                    '-t', String(l),
                     '-acodec', 'copy',
                     '-vn',
                     '-y',

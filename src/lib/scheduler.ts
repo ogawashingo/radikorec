@@ -202,9 +202,6 @@ export function shouldTrigger(s: Schedule, now: Date): boolean {
 }
 
 export function shouldTriggerWeekly(s: Schedule, now: Date): boolean {
-    const currentHH = getHours(now);
-    const currentMin = getMinutes(now);
-    const currentDayOfWeek = getDay(now);
     const isRealtime = s.is_realtime === 1;
     let timePart = s.start_time;
     if (s.start_time.includes('T')) {
@@ -212,34 +209,30 @@ export function shouldTriggerWeekly(s: Schedule, now: Date): boolean {
     }
     const [startH, startM] = timePart.split(':').map(Number); // 例: "25:30" -> 25, 30
 
-    let targetH = startH;
-    const targetM = startM;
+    // 過去2日から今日までの論理的な放送日をチェック (24時間を超える深夜放送をカバーするため)
+    for (let dayOffset = -2; dayOffset <= 0; dayOffset++) {
+        // offsetDayの深夜0時を基準とする
+        const offsetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset);
 
-    // 「今日」の実際のターゲットとなる時間を決定
-    if (s.day_of_week !== currentDayOfWeek) {
-        // これは別の日（昨日）のスケジュールです
-        // 深夜番組（24時間以上）の場合にのみ、今日トリガーされます
-        if (startH >= 24) {
-            targetH = startH - 24;
-        } else {
-            return false;
-        }
-    } else {
-        // これは今日のスケジュールです
-        // もし startH >= 24 の場合、明日実行されます（そのため今日は無視します）
-        if (startH >= 24) {
-            return false;
+        // s.day_of_week と offsetDate の曜日が一致するか確認
+        if (getDay(offsetDate) === s.day_of_week) {
+            // 一致した場合、この日の論理的な開始時刻を作成
+            const actualStartDate = new Date(offsetDate.getFullYear(), offsetDate.getMonth(), offsetDate.getDate(), startH, startM);
+
+            if (isRealtime) {
+                // リアルタイム: ちょうどその開始時刻になったら実行
+                if (getHours(actualStartDate) === getHours(now) && getMinutes(actualStartDate) === getMinutes(now) && getDay(actualStartDate) === getDay(now)) {
+                    return true;
+                }
+            } else {
+                // タイムフリー: (開始 + 時間 + 5分) と一致したら実行
+                const triggerDate = addMinutes(actualStartDate, s.duration + 5);
+                if (getHours(triggerDate) === getHours(now) && getMinutes(triggerDate) === getMinutes(now) && getDay(triggerDate) === getDay(now)) {
+                    return true;
+                }
+            }
         }
     }
 
-    if (isRealtime) {
-        // リアルタイム: 開始時刻と一致したら実行
-        return targetH === currentHH && targetM === currentMin;
-    } else {
-        // タイムフリー: (開始 + 時間 + 5分) と一致したら実行
-        const baseDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetH, targetM);
-        const triggerDate = addMinutes(baseDate, s.duration + 5);
-
-        return currentHH === getHours(triggerDate) && currentMin === getMinutes(triggerDate);
-    }
+    return false;
 }
