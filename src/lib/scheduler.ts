@@ -189,6 +189,11 @@ export function shouldTrigger(s: Schedule, now: Date): boolean {
         // ただし、余りにも過去すぎる(1時間前とか)は無視するか？一旦OKとする
         return true;
     } else {
+        // リトライ中の場合は、時間の経過に関わらず即座に実行を許可する
+        if (s.retry_count && s.retry_count > 0) {
+            return true;
+        }
+
         // タイムフリー: 終了時刻 + 5分後くらいに実行
         // start_time から duration を足して終了時刻を計算
         const start = new Date(s.start_time);

@@ -72,7 +72,7 @@ export class RadikoRecorder {
                 outputPath
             ];
 
-            await this.spawnFfmpeg(ffmpegArgs, 'ライブ録音');
+            await this.spawnFfmpeg(ffmpegArgs, 'ライブ録音', durationSec * 1000 + 5 * 60 * 1000); // 録音時間 + 5分バッファ
 
         } else {
             // --- タイムフリー録音 (チャンク分割実装) ---
@@ -181,7 +181,7 @@ export class RadikoRecorder {
                     let downloadSuccess = false;
                     for (let attempt = 1; attempt <= 3; attempt++) {
                         try {
-                            await this.spawnFfmpeg(task.args, `Chunk ${task.chunkNo} (Attempt ${attempt})`);
+                            await this.spawnFfmpeg(task.args, `Chunk ${task.chunkNo} (Attempt ${attempt})`, task.l * 1000 + 2 * 60 * 1000); // チャンク長 + 2分バッファ
                             if (fs.existsSync(task.chunkFile)) {
                                 downloadSuccess = true;
                                 break;
@@ -243,7 +243,7 @@ export class RadikoRecorder {
                     '-y',
                     outputPath
                 ];
-                await this.spawnFfmpeg(concatArgs, 'チャンク結合');
+                await this.spawnFfmpeg(concatArgs, 'チャンク結合', 5 * 60 * 1000); // 結合処理は最大5分でタイムアウト
                 console.log(`[Recorder] タイムフリー録音完了`);
                 if (onProgress) onProgress(100);
 
@@ -265,17 +265,26 @@ export class RadikoRecorder {
         }
     }
 
-    private spawnFfmpeg(args: string[], label: string = 'ffmpeg'): Promise<void> {
+    private spawnFfmpeg(args: string[], label: string = 'ffmpeg', timeoutMs?: number): Promise<void> {
         return new Promise((resolve, reject) => {
             const proc = spawn('ffmpeg', args);
 
             let stderr = '';
+
+            let timeoutId: NodeJS.Timeout | null = null;
+            if (timeoutMs) {
+                timeoutId = setTimeout(() => {
+                    proc.kill('SIGKILL');
+                    reject(new Error(`[Recorder] ${label} timed out after ${timeoutMs}ms and was forcibly killed.`));
+                }, timeoutMs);
+            }
 
             proc.stderr.on('data', (data) => {
                 stderr += data.toString();
             });
 
             proc.on('close', (code) => {
+                if (timeoutId) clearTimeout(timeoutId);
                 if (code === 0) {
                     console.log(`[Recorder] ${label} 成功`);
                     resolve();
@@ -285,6 +294,7 @@ export class RadikoRecorder {
             });
 
             proc.on('error', (err) => {
+                if (timeoutId) clearTimeout(timeoutId);
                 console.error(`[Recorder] ${label} 起動エラー`, err);
                 reject(err);
             });
