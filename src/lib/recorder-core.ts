@@ -35,6 +35,14 @@ export class RadikoRecorder {
 
         if (isRealtime) {
             // --- リアルタイム録音 ---
+            // Radikoの配信遅延（約1分45秒）に合わせて録音開始を遅らせる
+            const delayMs = 105 * 1000;
+            logger.info({ stationId, delayMs }, 'Radikoのストリーム遅延に対応するため、ライブ録音の開始を待機します');
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+
+            // 末尾が切れないように、実際の録音時間を15秒延長する
+            const recordDurationSec = durationSec + 15;
+
             const liveStreamUrl = await this.client.getLiveStreamBaseUrl(stationId);
             const lsid = this.getLsid();
 
@@ -64,7 +72,7 @@ export class RadikoRecorder {
                 '-reconnect_delay_max', '5',
                 '-seekable', '0',
                 '-i', fullUrl,
-                '-t', String(durationSec),
+                '-t', String(recordDurationSec), // 録音時間を延長したものに置き換え
                 '-acodec', 'copy',
                 '-vn',
                 '-bsf:a', 'aac_adtstoasc',
@@ -72,7 +80,7 @@ export class RadikoRecorder {
                 outputPath
             ];
 
-            await this.spawnFfmpeg(ffmpegArgs, 'ライブ録音', durationSec * 1000 + 5 * 60 * 1000); // 録音時間 + 5分バッファ
+            await this.spawnFfmpeg(ffmpegArgs, 'ライブ録音', recordDurationSec * 1000 + 5 * 60 * 1000); // 録音時間 + 5分バッファ
 
         } else {
             // --- タイムフリー録音 (チャンク分割実装) ---
