@@ -35,13 +35,11 @@ export class RadikoRecorder {
 
         if (isRealtime) {
             // --- リアルタイム録音 ---
-            // Radikoの配信遅延に合わせて録音開始を遅らせる (頭切れを防ぐため少し短めの45秒待機に調整)
-            const delayMs = 45 * 1000;
-            logger.info({ stationId, delayMs }, 'Radikoのストリーム遅延に対応するため、ライブ録音の開始を待機します');
-            await new Promise(resolve => setTimeout(resolve, delayMs));
+            // 確実な録音のために待機時間は設けず、スケジュール時刻ぴったりに録音を開始します
+            logger.info({ stationId }, 'Radikoのストリーム遅延をカバーするため、待機なしでライブ録音を開始します');
 
-            // 開始を早くした分、より後ろが切れないように録音時間を60秒延長する
-            const recordDurationSec = durationSec + 60;
+            // 開始を早めた分、および最大2分程度の遅延リスクを吸収するため、録音時間を150秒(2.5分)延長する
+            const recordDurationSec = durationSec + 150;
 
             const liveStreamUrl = await this.client.getLiveStreamBaseUrl(stationId);
             const lsid = this.getLsid();
