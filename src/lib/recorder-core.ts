@@ -36,7 +36,7 @@ export class RadikoRecorder {
         if (isRealtime) {
             // --- リアルタイム録音 ---
             // 確実な録音のために待機時間は設けず、スケジュール時刻ぴったりに録音を開始します
-            logger.info({ stationId }, 'Radikoのストリーム遅延をカバーするため、待機なしでライブ録音を開始します');
+            logger.info({ stationId }, 'radikoのストリーム遅延をカバーするため、待機なしでライブ録音を開始します');
 
             // 開始を早めた分、および最大2分程度の遅延リスクを吸収するため、録音時間を150秒(2.5分)延長する
             const recordDurationSec = durationSec + 150;
