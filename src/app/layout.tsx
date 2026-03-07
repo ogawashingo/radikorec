@@ -4,7 +4,17 @@ import { ClientLayout } from "@/components/ClientLayout";
 
 export const metadata: Metadata = {
   title: "radikoRec",
-  description: "radiko Recording System via CLI",
+  description: "radiko 録音システム",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "radikoRec",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+    icon: "/icon-512.png",
+  },
 };
 
 export default function RootLayout({
