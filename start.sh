@@ -14,6 +14,9 @@ mkdir -p ./data
 mkdir -p ./data/whisper-cache
 mkdir -p ./public/records
 
+# whisper-cache はDockerコンテナ(python)が書き込むため誰でも書き込めるよう設定
+chmod -R 777 ./data/whisper-cache
+
 # Change ownership to the current user (requires sudo if running as a normal user and directories are owned by root)
 # Alternatively, since we create them as the current user, they will belong to the current user.
 # But if they were already created by root (Docker daemon), we might need sudo.
