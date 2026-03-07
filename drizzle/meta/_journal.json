@@ -29,6 +29,13 @@
       "when": 1771772454574,
       "tag": "0003_lonely_outlaw_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1772846841458,
+      "tag": "0004_add_transcript",
+      "breakpoints": true
     }
   ]
 }
