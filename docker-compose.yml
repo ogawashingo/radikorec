@@ -14,4 +14,4 @@ services:
       - ./public/records:/app/public/records:z
       - ./data:/app/data:z
       - ./.env:/app/.env:z
-      - ./data/whisper-cache:/home/nextjs/.cache/huggingface:z
+

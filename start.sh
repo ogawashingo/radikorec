@@ -11,6 +11,7 @@ echo "UID = ${UID}, GID = ${GID}"
 
 # Create directories if they don't exist
 mkdir -p ./data
+mkdir -p ./data/whisper-cache
 mkdir -p ./public/records
 
 # Change ownership to the current user (requires sudo if running as a normal user and directories are owned by root)
