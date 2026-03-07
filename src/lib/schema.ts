@@ -33,6 +33,9 @@ export const records = sqliteTable('records', {
     size: integer('size').notNull(),
     is_watched: integer('is_watched').default(0).notNull(),
     created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+    // 文字起こし関連
+    transcript: text('transcript'),              // 文字起こし結果テキスト
+    transcript_status: text('transcript_status'), // null | 'processing' | 'done' | 'error'
 });
 
 export const keywords = sqliteTable('keywords', {

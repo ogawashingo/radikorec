@@ -1,12 +1,13 @@
 'use client';
 
 import { Record } from '@/types';
-import { Trash2, Play, Download, Pause, Folder, ChevronRight, ChevronDown, ArrowUp, ArrowDown, LayoutList, Layers } from 'lucide-react';
+import { Trash2, Play, Download, Pause, Folder, ChevronRight, ChevronDown, ArrowUp, ArrowDown, LayoutList, Layers, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
 import { useAudio } from '@/context/AudioContext';
 import { twMerge } from 'tailwind-merge';
 import { ConfirmDialog } from './ConfirmDialog';
+import { TranscriptViewer } from './TranscriptViewer';
 
 // ソートキーの型定義
 type SortKey = 'start_time' | 'title' | 'station_id';
@@ -57,6 +58,12 @@ export function RecordList({ records }: { records: Record[] }) {
   // グループ化の状態
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [deleteFilename, setDeleteFilename] = useState<string | null>(null);
+
+  // 文字起こし関連のState
+  const [transcribingFiles, setTranscribingFiles] = useState<Set<string>>(new Set());
+  const [viewerState, setViewerState] = useState<{ open: boolean; title: string; transcript: string }>({
+    open: false, title: '', transcript: ''
+  });
 
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups);
@@ -150,6 +157,66 @@ export function RecordList({ records }: { records: Record[] }) {
 
   const isThisPlaying = (record: Record) => {
     return currentRecord?.id === record.id && isPlaying;
+  };
+
+  // 文字起こし開始
+  const startTranscript = async (record: Record) => {
+    setTranscribingFiles(prev => new Set(prev).add(record.filename));
+    // 楽観的にステータスを更新
+    setOptimisticRecords(prev => prev.map(r =>
+      r.filename === record.filename ? { ...r, transcript_status: 'processing' } : r
+    ));
+
+    try {
+      const res = await fetch('/api/records/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: record.filename })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed');
+      }
+      // バックグラウンド処理が始まったのでポーリングを開始
+      pollTranscriptStatus(record.filename);
+    } catch (e) {
+      console.error(e);
+      setTranscribingFiles(prev => { const s = new Set(prev); s.delete(record.filename); return s; });
+      setOptimisticRecords(prev => prev.map(r =>
+        r.filename === record.filename ? { ...r, transcript_status: 'error' } : r
+      ));
+      alert('文字起こしの開始に失敗しました: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  // 文字起こしステータスをポーリングして完了を待つ
+  const pollTranscriptStatus = (filename: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/records/transcribe?filename=${encodeURIComponent(filename)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.transcript_status === 'done' || data.transcript_status === 'error') {
+          clearInterval(interval);
+          setTranscribingFiles(prev => { const s = new Set(prev); s.delete(filename); return s; });
+          setOptimisticRecords(prev => prev.map(r =>
+            r.filename === filename ? { ...r, transcript_status: data.transcript_status, transcript: data.transcript } : r
+          ));
+        }
+      } catch {
+        // ポーリングエラーは無視（次のインターバルで再試行）
+      }
+    }, 5000); // 5秒ごとにポーリング
+  };
+
+  // 文字起こし結果を表示
+  const showTranscript = (record: Record) => {
+    setViewerState({
+      open: true,
+      title: record.title || record.filename,
+      transcript: record.transcript || ''
+    });
   };
 
   const toggleWatched = async (record: Record) => {
@@ -382,6 +449,42 @@ export function RecordList({ records }: { records: Record[] }) {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 w-full sm:w-auto justify-end border-t border-slate-100 sm:border-0 pt-2 sm:pt-0">
+                    {/* 文字起こしボタン */}
+                    {record.transcript_status === 'processing' || transcribingFiles.has(record.filename) ? (
+                      <button
+                        disabled
+                        className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] font-bold border bg-amber-50 text-amber-600 border-amber-100 flex items-center justify-center gap-1.5 cursor-not-allowed"
+                      >
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        変換中
+                      </button>
+                    ) : record.transcript_status === 'done' ? (
+                      <button
+                        onClick={() => showTranscript(record)}
+                        className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] font-bold border bg-green-50 text-green-700 border-green-100 hover:bg-green-100 flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        テキスト表示
+                      </button>
+                    ) : record.transcript_status === 'error' ? (
+                      <button
+                        onClick={() => startTranscript(record)}
+                        className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] font-bold border bg-red-50 text-red-600 border-red-100 hover:bg-red-100 flex items-center justify-center gap-1.5 transition-all"
+                        title={record.transcript || 'エラーが発生しました'}
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        再実行
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => startTranscript(record)}
+                        className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] font-bold border bg-slate-50 text-slate-500 border-slate-200 hover:bg-blue-50 hover:text-radiko-blue hover:border-blue-100 flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        文字起こし
+                      </button>
+                    )}
+
                     <button
                       onClick={() => toggleWatched(record)}
                       className={twMerge(
@@ -430,6 +533,12 @@ export function RecordList({ records }: { records: Record[] }) {
         message="本当に削除してもよろしいですか？ ファイルは完全に削除されます。"
         isDestructive={true}
       />
-    </div >
+      <TranscriptViewer
+        isOpen={viewerState.open}
+        onClose={() => setViewerState(prev => ({ ...prev, open: false }))}
+        title={viewerState.title}
+        transcript={viewerState.transcript}
+      />
+    </div>
   );
 }

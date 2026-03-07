@@ -48,7 +48,10 @@ ENV NODE_ENV production
 ENV TZ=Asia/Tokyo
 
 # tzdata のインストール (slimイメージには含まれていないため)
-RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata python3 python3-pip && rm -rf /var/lib/apt/lists/*
+
+# faster-whisper のインストール（文字起こし機能用）
+RUN pip3 install faster-whisper --break-system-packages
 
 # 静的リンクされた ffmpeg バイナリをコピー (サイズ削減のため)
 # Docker Hub の mwader/static-ffmpeg イメージからバイナリだけを取得
@@ -72,7 +75,10 @@ COPY --chown=nextjs:nodejs start-server.js ./
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 
 # 録音用ディレクトリとデータ用ディレクトリの作成
-RUN mkdir -p records data && chown nextjs:nodejs records data
+RUN mkdir -p records data data/whisper-cache && chown nextjs:nodejs records data data/whisper-cache
+
+# 文字起こしスクリプトをコピー
+COPY --chown=nextjs:nodejs scripts ./scripts
 
 # キャッシュ作成時の権限エラー（EACCES）を回避するため、.next 配下に誰でも書き込めるよう権限設定
 RUN mkdir -p .next/cache && chown nextjs:nodejs .next/cache && chmod -R 777 .next/cache && chmod 777 .next
