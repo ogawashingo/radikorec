@@ -122,12 +122,16 @@ export function initScheduler() {
                     // Discord通知を送信
                     sendDiscordNotification(`✅ 録音完了: ${s.title || s.station_id}`, {
                         title: s.title || '無題の番組',
-                        color: 0x00ff00, // 緑色
+                        description: '録音が正常に完了しました。',
+                        color: 0x22c55e, // 緑色
                         fields: [
                             { name: '放送局', value: s.station_id, inline: true },
-                            { name: 'サイズ', value: formatFileSize(res.size || 0), inline: true },
-                            { name: '録音時間', value: `${s.duration}分`, inline: true }
+                            { name: '録音時間', value: `${s.duration}分`, inline: true },
+                            { name: 'ファイルサイズ', value: formatFileSize(res.size || 0), inline: true },
+                            { name: 'ファイル名', value: res.filename ? `\`${res.filename}\`` : '不明', inline: false },
+                            { name: '録音開始', value: recStartTime ? new Date(recStartTime).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '不明', inline: true },
                         ],
+                        footer: { text: 'radikoRec' },
                         timestamp: new Date().toISOString()
                     });
                 })
@@ -165,12 +169,14 @@ export function initScheduler() {
 
                     sendDiscordNotification(`${statusText}: ${s.title || s.station_id}`, {
                         title: s.title || '無題の番組',
-                        color: isRetrying ? 0xffa500 : 0xff0000, // オレンジ色または赤色
-                        description: `エラー内容: \`\`\`${errorMsg}\`\`\``,
+                        color: isRetrying ? 0xf59e0b : 0xef4444, // オレンジ色または赤色
+                        description: `**エラー内容:**\n\`\`\`${errorMsg.slice(0, 300)}\`\`\``,
                         fields: [
                             { name: '放送局', value: s.station_id, inline: true },
-                            { name: '録音時間', value: `${s.duration}分`, inline: true }
+                            { name: '録音時間', value: `${s.duration}分`, inline: true },
+                            { name: '録音開始予定', value: recStartTime ? new Date(recStartTime).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '不明', inline: true },
                         ],
+                        footer: { text: 'radikoRec' },
                         timestamp: new Date().toISOString()
                     });
                 });
