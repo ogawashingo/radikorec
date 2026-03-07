@@ -54,13 +54,13 @@ export function DownloadStatus() {
                 >
                     <button
                         onClick={() => handleDismiss(job.id)}
-                        className="absolute -top-2 -right-2 bg-white text-slate-400 hover:text-slate-600 border border-slate-200 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                        className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-2 -m-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                         title="閉じる"
                     >
-                        <X className="w-3 h-3" />
+                        <X className="w-4 h-4" />
                     </button>
 
-                    <div className="flex justify-between items-start mb-2 pr-2">
+                    <div className="flex justify-between items-start mb-2 pr-6">
                         <h4 className="font-bold text-sm text-slate-800 line-clamp-1" title={job.title}>
                             {job.title}
                         </h4>
@@ -102,7 +102,8 @@ export function DownloadStatus() {
                         )}
                     </div>
                 </div>
-            ))}
-        </div>
+            ))
+            }
+        </div >
     );
 }
