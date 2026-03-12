@@ -5,7 +5,7 @@ import { ClientLayout } from "@/components/ClientLayout";
 export const metadata: Metadata = {
   title: "radikoRec",
   description: "radiko 録音システム",
-  manifest: "/manifest.json",
+  manifest: "/manifest.json?v=2",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
