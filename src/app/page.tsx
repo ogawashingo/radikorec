@@ -59,32 +59,6 @@ export default function Home() {
       </div>
 
 
-      {/* Stats Cards (Simple) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-blue-50 rounded-xl text-radiko-blue">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-slate-500 text-sm font-medium">予約中のスケジュール</div>
-              <div className="text-2xl font-bold text-slate-800">{allSchedules.length}</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-purple-50 rounded-xl text-purple-600">
-              <Disc className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-slate-500 text-sm font-medium">録音済みファイル</div>
-              <div className="text-2xl font-bold text-slate-800">{drizzleDb.select({ count: sql<number>`count(*)` }).from(records).get()?.count ?? 0}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Storage Card */}
       <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
         <h3 className="text-lg font-bold text-slate-800 mb-4">ストレージ使用状況</h3>
@@ -129,15 +103,6 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Schedules */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center px-1">
-            <h2 className="text-xl font-bold text-slate-800">今後の予約</h2>
-            <Link href="/schedules" className="text-sm font-bold text-radiko-blue hover:text-sky-500">すべて見る</Link>
-          </div>
-          <ScheduleList schedules={allSchedules} />
-        </div>
-
         {/* Recent Recordings */}
         <div className="space-y-4">
           <div className="flex justify-between items-center px-1">
@@ -145,6 +110,15 @@ export default function Home() {
             <Link href="/records" className="text-sm font-bold text-radiko-blue hover:text-sky-500">すべて見る</Link>
           </div>
           <RecordList records={recentRecords} />
+        </div>
+
+        {/* Schedules */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-xl font-bold text-slate-800">今後の予約</h2>
+            <Link href="/schedules" className="text-sm font-bold text-radiko-blue hover:text-sky-500">すべて見る</Link>
+          </div>
+          <ScheduleList schedules={allSchedules} />
         </div>
       </div>
 
