@@ -53,10 +53,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends tzdata python3 
 # faster-whisper のインストール（文字起こし機能用）
 RUN pip3 install faster-whisper --break-system-packages
 
-# 静的リンクされた ffmpeg バイナリをコピー (サイズ削減のため)
-# Docker Hub の mwader/static-ffmpeg イメージからバイナリだけを取得
-COPY --from=mwader/static-ffmpeg:6.1 /ffmpeg /usr/local/bin/
-COPY --from=mwader/static-ffmpeg:6.1 /ffprobe /usr/local/bin/
+# 常に最新または安定版の ffmpeg バイナリをコピー
+COPY --from=mwader/static-ffmpeg:8.1 /ffmpeg /usr/local/bin/
+COPY --from=mwader/static-ffmpeg:8.1 /ffprobe /usr/local/bin/
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
