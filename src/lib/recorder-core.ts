@@ -260,12 +260,27 @@ export class RadikoRecorder {
             } finally {
                 // 一時ファイル削除
                 try {
-                    if (fs.existsSync(fileListPath)) fs.unlinkSync(fileListPath);
+                    const unlinkPromises: Promise<void>[] = [];
+                    if (fs.existsSync(fileListPath)) {
+                        unlinkPromises.push(fs.promises.unlink(fileListPath).catch(err => {
+                            console.error(`Failed to unlink fileListPath: ${fileListPath}`, err);
+                        }));
+                    }
                     chunkFiles.forEach(f => {
-                        if (fs.existsSync(f)) fs.unlinkSync(f);
+                        if (fs.existsSync(f)) {
+                            unlinkPromises.push(fs.promises.unlink(f).catch(err => {
+                                console.error(`Failed to unlink chunk file: ${f}`, err);
+                            }));
+                        }
+                    });
+
+                    // Promise.allSettled等で待機することも可能ですが、
+                    // 非同期でバックグラウンド実行させてメインロジックのブロックを防ぐ方針とします
+                    Promise.allSettled(unlinkPromises).then(() => {
+                        logger.debug('Temporary chunk files cleaned up successfully');
                     });
                 } catch (cleanupErr) {
-                    console.error('Core dump cleanup failed', cleanupErr);
+                    console.error('Core dump cleanup initialization failed', cleanupErr);
                 }
             }
         }
