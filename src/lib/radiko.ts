@@ -54,7 +54,7 @@ export class RadikoClient {
                 'region.stations',
                 'region.stations.station'
             ];
-            return arrayPaths.includes(jpath);
+            return arrayPaths.includes(String(jpath));
         }
     });
 

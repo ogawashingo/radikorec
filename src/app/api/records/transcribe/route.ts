@@ -21,10 +21,13 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'filename は必須です' }, { status: 400 });
     }
 
+    // パストラバーサル対策: ファイル名のみを抽出
+    const safeFilename = path.basename(filename);
+
     const record = drizzleDb.select({
         transcript: records.transcript,
         transcript_status: records.transcript_status,
-    }).from(records).where(eq(records.filename, filename)).get();
+    }).from(records).where(eq(records.filename, safeFilename)).get();
 
     if (!record) {
         return NextResponse.json({ error: 'レコードが見つかりません' }, { status: 404 });
@@ -52,8 +55,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'filename は必須です' }, { status: 400 });
     }
 
+    // パストラバーサル対策: ファイル名のみを抽出
+    const safeFilename = path.basename(filename);
+
     // DB のレコードを確認
-    const record = drizzleDb.select().from(records).where(eq(records.filename, filename)).get();
+    const record = drizzleDb.select().from(records).where(eq(records.filename, safeFilename)).get();
     if (!record) {
         return NextResponse.json({ error: 'レコードが見つかりません' }, { status: 404 });
     }
@@ -64,7 +70,7 @@ export async function POST(request: Request) {
     }
 
     // 音声ファイルの存在確認
-    const audioPath = path.join(RECORDS_DIR, filename);
+    const audioPath = path.join(RECORDS_DIR, safeFilename);
     if (!fs.existsSync(audioPath)) {
         return NextResponse.json({ error: '音声ファイルが見つかりません' }, { status: 404 });
     }
@@ -72,11 +78,11 @@ export async function POST(request: Request) {
     // ステータスを processing に更新
     drizzleDb.update(records)
         .set({ transcript_status: 'processing', transcript: null })
-        .where(eq(records.filename, filename))
+        .where(eq(records.filename, safeFilename))
         .run();
 
     const pythonPath = process.env.PYTHON_PATH || 'python3';
-    logger.info({ filename, audioPath, pythonPath }, '文字起こしをバックグラウンドで開始します');
+    logger.info({ filename: safeFilename, audioPath, pythonPath }, '文字起こしをバックグラウンドで開始します');
 
     // setImmediate でイベントループに乗せることで、レスポンス返却後も処理を継続させる
     setImmediate(async () => {
@@ -88,20 +94,20 @@ export async function POST(request: Request) {
                     transcript: result.fullText,
                     transcript_status: 'done',
                 })
-                .where(eq(records.filename, filename))
+                .where(eq(records.filename, safeFilename))
                 .run();
 
-            logger.info({ filename }, '文字起こしをDBに保存しました');
+            logger.info({ filename: safeFilename }, '文字起こしをDBに保存しました');
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
-            logger.error({ filename, error: errorMsg }, '文字起こしに失敗しました');
+            logger.error({ filename: safeFilename, error: errorMsg }, '文字起こしに失敗しました');
 
             drizzleDb.update(records)
                 .set({
                     transcript_status: 'error',
                     transcript: errorMsg,
                 })
-                .where(eq(records.filename, filename))
+                .where(eq(records.filename, safeFilename))
                 .run();
         }
     });

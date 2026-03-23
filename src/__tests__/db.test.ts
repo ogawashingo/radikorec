@@ -42,6 +42,8 @@ describe('Drizzle ORM Integration Tests', () => {
               file_path TEXT,
               size INTEGER,
               is_watched INTEGER DEFAULT 0,
+              transcript TEXT,
+              transcript_status TEXT DEFAULT 'none',
               created_at TEXT DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE IF NOT EXISTS keywords (
