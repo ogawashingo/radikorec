@@ -17,8 +17,9 @@ export async function GET(request: Request) {
         }
 
         // File param exists, stream the file
+        const safeFileParam = path.basename(fileParam);
         const recordsDir = path.join(process.cwd(), 'public', 'records');
-        const filePath = path.join(recordsDir, fileParam);
+        const filePath = path.join(recordsDir, safeFileParam);
 
         if (!fs.existsSync(filePath)) {
             return NextResponse.json({ error: 'File not found' }, { status: 404 });
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
         const range = request.headers.get('range');
 
         const isDownload = url.searchParams.get('download') === 'true';
-        const encodedFilename = encodeURIComponent(fileParam);
+        const encodedFilename = encodeURIComponent(safeFileParam);
 
         const headers = new Headers();
         headers.set('Content-Type', 'audio/mp4');
@@ -89,14 +90,17 @@ export async function DELETE(request: Request) {
         // Decode the filename cleanly handles query parameters
         filename = decodeURIComponent(filename);
 
+        // Prevent path traversal
+        const safeFilename = path.basename(filename);
+
         const recordsDir = path.join(process.cwd(), 'public', 'records');
-        const filePath = path.join(recordsDir, filename);
+        const filePath = path.join(recordsDir, safeFilename);
 
         // Delete from DB
-        const result = drizzleDb.delete(records).where(eq(records.filename, filename)).run();
+        const result = drizzleDb.delete(records).where(eq(records.filename, safeFilename)).run();
 
         if (result.changes === 0) {
-            return NextResponse.json({ error: `データベース上にファイル ${filename} の記録が見つかりませんでした (削除件数: 0)` }, { status: 404 });
+            return NextResponse.json({ error: `データベース上にファイル ${safeFilename} の記録が見つかりませんでした (削除件数: 0)` }, { status: 404 });
         }
 
         // Delete from Filesystem
