@@ -48,19 +48,18 @@ export class RadikoRecorder {
             url.searchParams.set('station_id', stationId);
             url.searchParams.delete('l'); // 15秒で切れる問題と400エラー回避のため削除
             url.searchParams.set('lsid', lsid); // 安定性のために維持
-            url.searchParams.set('type', 'b'); // ライブ用サーバーに合わせて type=b に戻す
+            url.searchParams.set('type', 'c'); // サーバーの期待に合わせて type=c に戻す
 
             const fullUrl = url.toString();
             // ライブ録画でもエリア認証が必要な場合があるため ID を追加
             const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\n`;
+            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\nUser-Agent: ${userAgent}\r\n`;
 
             const ffmpegArgs = [
                 '-nostdin',
                 '-loglevel', 'warning', // エラー原因特定のため詳細化
                 '-fflags', '+discardcorrupt',
                 '-headers', headers,
-                '-user_agent', userAgent,
                 '-http_seekable', '0',
                 '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
                 '-multiple_requests', '1', // HTTP keep-alive
