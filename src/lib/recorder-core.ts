@@ -46,14 +46,19 @@ export class RadikoRecorder {
 
             const url = new URL(liveStreamUrl);
             url.searchParams.set('station_id', stationId);
-            url.searchParams.set('l', '15'); // 初期の正常動作設定に戻す
+            url.searchParams.set('l', '300'); // サーバーが許容する安定した値(5分)に設定
             url.searchParams.set('lsid', lsid); // 安定性のために維持
-            url.searchParams.set('type', 'b'); // ライブ用サーバーに合わせて type=b に戻す
+            url.searchParams.set('type', 'c'); // チャンク形式を使用
 
             const fullUrl = url.toString();
             // ライブ録画でもエリア認証が必要な場合があるため ID を追加
             const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\nUser-Agent: ${userAgent}\r\n`;
+            let headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\nUser-Agent: ${userAgent}\r\n`;
+            
+            // プレミアム会員の場合はセッションCookieを追加
+            if (auth.radiko_session) {
+                headers += `Cookie: radiko_session=${auth.radiko_session}\r\n`;
+            }
 
             const ffmpegArgs = [
                 '-nostdin',

@@ -49,3 +49,4 @@ public/records/*
 !public/records/.gitkeep
 scanner.log
 data/*.log
+data/
