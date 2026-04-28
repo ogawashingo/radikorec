@@ -46,9 +46,9 @@ export class RadikoRecorder {
 
             const url = new URL(liveStreamUrl);
             url.searchParams.set('station_id', stationId);
-            url.searchParams.delete('l'); // 15秒で切れる問題と400エラー回避のため削除
+            url.searchParams.set('l', '15'); // 初期の正常動作設定に戻す
             url.searchParams.set('lsid', lsid); // 安定性のために維持
-            url.searchParams.set('type', 'c'); // サーバーの期待に合わせて type=c に戻す
+            url.searchParams.set('type', 'b'); // ライブ用サーバーに合わせて type=b に戻す
 
             const fullUrl = url.toString();
             // ライブ録画でもエリア認証が必要な場合があるため ID を追加
