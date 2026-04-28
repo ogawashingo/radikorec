@@ -46,7 +46,7 @@ export class RadikoRecorder {
 
             const url = new URL(liveStreamUrl);
             url.searchParams.set('station_id', stationId);
-            url.searchParams.set('l', '15');
+            url.searchParams.set('l', String(recordDurationSec)); // 録音予定秒数を指定 (固定値15から修正)
             url.searchParams.set('lsid', lsid); // セッション維持のため lsid を復活 (ランダム生成)
             url.searchParams.set('type', 'c'); // type=c は維持
 
