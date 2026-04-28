@@ -165,12 +165,22 @@ export class RadikoClient {
         throw new Error('ライブストリームURLが見つかりませんでした');
     }
 
+    /** Alias for getLiveStreamUrl */
+    async getLiveStreamBaseUrl(stationId: string): Promise<string> {
+        return this.getLiveStreamUrl(stationId);
+    }
+
     async getTimeFreeStreamUrl(stationId: string): Promise<string> {
         const urls = await this.fetchStationUrls(stationId);
         const areaFreeParam = this.areaFree ? '1' : '0';
         const matches = urls.filter(u => u['@_timefree'] === '1' && u['@_areafree'] === areaFreeParam);
         if (matches.length > 0) return matches[0].playlist_create_url;
         throw new Error('タイムフリーURLが見つかりませんでした');
+    }
+
+    /** Alias for getTimeFreeStreamUrl */
+    async getStreamBaseUrl(stationId: string): Promise<string> {
+        return this.getTimeFreeStreamUrl(stationId);
     }
 
     async getProgramSchedule(stationId: string, date: string): Promise<Program[]> {
@@ -239,5 +249,50 @@ export class RadikoClient {
             }
         }
         return stations;
+    }
+
+    /**
+     * キーワードで番組を検索する
+     */
+    async search(keyword: string, filter: 'future' | 'past' | 'all' = 'all'): Promise<Program[]> {
+        const auth = await this.getAuthToken();
+        const url = `https://radiko.jp/v3/program/search?key=${encodeURIComponent(keyword)}&filter=${filter}&area_id=${auth.area_id}`;
+        
+        const res = await fetch(url);
+        if (!res.ok) return [];
+
+        const xml = await res.text();
+        const jsonObj = this.parser.parse(xml);
+        
+        const progs = jsonObj.radiko?.programs?.program;
+        if (!progs) return [];
+
+        const progArray = Array.isArray(progs) ? progs : [progs];
+        const programs: Program[] = [];
+
+        for (const prog of progArray) {
+            const ft = prog['@_ft'];
+            const to = prog['@_to'];
+            const dur = prog['@_dur'] || '0';
+            const stationId = prog.station_id || '';
+
+            if (!ft) continue;
+
+            const startObj = parse(ft, 'yyyyMMddHHmmss', new Date());
+            const endObj = to ? parse(to, 'yyyyMMddHHmmss', new Date()) : new Date(startObj.getTime() + parseInt(dur, 10) * 1000);
+
+            programs.push({
+                title: this.sanitizeString(prog.title),
+                start_time: format(startObj, 'yyyy-MM-dd HH:mm:ss'),
+                end_time: format(endObj, 'yyyy-MM-dd HH:mm:ss'),
+                display_time: format(startObj, 'HH:mm'),
+                station_id: stationId,
+                performer: this.sanitizeString(prog.pfm),
+                description: this.sanitizeString(prog.desc),
+                status: 'future' // 簡易的にfuture固定（呼び出し側でさらにフィルタリングされるため）
+            });
+        }
+
+        return programs;
     }
 }
