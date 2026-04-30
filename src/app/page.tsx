@@ -8,6 +8,7 @@ import { RecordList } from '@/components/RecordList';
 import { LogViewer } from '@/components/LogViewer';
 import fs from 'fs';
 import { formatFileSize } from '@/lib/notifier';
+import { getGitInfo } from '@/lib/git';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data
 
@@ -38,6 +39,7 @@ export default function Home() {
   const radikoPercent = totalSpace > 0 ? (radikoUsedSpace / totalSpace) * 100 : 0;
   const otherPercent = totalSpace > 0 ? (otherUsedSpace / totalSpace) * 100 : 0;
   const freePercent = totalSpace > 0 ? (freeSpace / totalSpace) * 100 : 0;
+  const gitInfo = getGitInfo();
 
   return (
     <div className="space-y-8">
@@ -47,7 +49,14 @@ export default function Home() {
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
             ダッシュボード
           </h1>
-          <p className="text-slate-500 mt-1">録音状況の概要</p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-x-4">
+            <p className="text-slate-500 mt-1">録音状況の概要</p>
+            {gitInfo && (
+              <p className="text-xs text-slate-400 mt-1 font-mono">
+                ver: {gitInfo.hash} ({gitInfo.date})
+              </p>
+            )}
+          </div>
         </div>
         <Link
           href="/schedules/new"
