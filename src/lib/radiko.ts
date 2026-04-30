@@ -256,40 +256,37 @@ export class RadikoClient {
      */
     async search(keyword: string, filter: 'future' | 'past' | 'all' = 'all'): Promise<Program[]> {
         const auth = await this.getAuthToken();
-        const url = `https://radiko.jp/v3/program/search?key=${encodeURIComponent(keyword)}&filter=${filter}&area_id=${auth.area_id}`;
+        let url = `https://radiko.jp/v3/api/program/search?key=${encodeURIComponent(keyword)}&area_id=${auth.area_id}`;
+        if (filter !== 'all') {
+            url += `&filter=${filter}`;
+        }
         
-        const res = await fetch(url);
-        if (!res.ok) return [];
+        const res = await fetch(url, {
+            headers: {
+                'X-Radiko-AuthToken': auth.authtoken
+            }
+        });
+        if (!res.ok) {
+            logger.error(`Radiko search failed: ${res.status} ${res.statusText}`);
+            return [];
+        }
 
-        const xml = await res.text();
-        const jsonObj = this.parser.parse(xml);
-        
-        const progs = jsonObj.radiko?.programs?.program;
-        if (!progs) return [];
+        const data = await res.json();
+        const progs = data.data;
+        if (!progs || !Array.isArray(progs)) return [];
 
-        const progArray = Array.isArray(progs) ? progs : [progs];
         const programs: Program[] = [];
 
-        for (const prog of progArray) {
-            const ft = prog['@_ft'];
-            const to = prog['@_to'];
-            const dur = prog['@_dur'] || '0';
-            const stationId = prog.station_id || '';
-
-            if (!ft) continue;
-
-            const startObj = parse(ft, 'yyyyMMddHHmmss', new Date());
-            const endObj = to ? parse(to, 'yyyyMMddHHmmss', new Date()) : new Date(startObj.getTime() + parseInt(dur, 10) * 1000);
-
+        for (const prog of progs) {
             programs.push({
                 title: this.sanitizeString(prog.title),
-                start_time: format(startObj, 'yyyy-MM-dd HH:mm:ss'),
-                end_time: format(endObj, 'yyyy-MM-dd HH:mm:ss'),
-                display_time: format(startObj, 'HH:mm'),
-                station_id: stationId,
-                performer: this.sanitizeString(prog.pfm),
-                description: this.sanitizeString(prog.desc),
-                status: 'future' // 簡易的にfuture固定（呼び出し側でさらにフィルタリングされるため）
+                start_time: prog.start_time, // yyyy-MM-dd HH:mm:ss 形式でそのまま入っている
+                end_time: prog.end_time,
+                display_time: prog.start_time ? prog.start_time.substring(11, 16) : '',
+                station_id: prog.station_id || '',
+                performer: this.sanitizeString(prog.performer),
+                description: this.sanitizeString(prog.info || prog.description),
+                status: (prog.status as any) || 'future'
             });
         }
 
