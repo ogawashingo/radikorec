@@ -19,6 +19,8 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # ソースコードのビルド
 FROM base AS builder
+# Git情報を取得するために git をインストール
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -28,6 +30,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN --mount=type=cache,target=/app/.next/cache \
     npm run build
+
+# Git情報の書き出し
+RUN echo "{\"hash\":\"$(git rev-parse --short HEAD)\", \"date\":\"$(git log -1 --format=%cd --date=format:'%Y/%m/%d %H:%M')\", \"message\":\"$(git log -1 --format=%s)\"}" > version.json
 
 # pino などの依存関係を standalone フォルダに集約してレイヤー数を削減
 # standalone ビルドではコピー漏れが発生するため手動でコピーする
@@ -72,6 +77,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --chown=nextjs:nodejs start-server.js ./
 
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+COPY --from=builder --chown=nextjs:nodejs /app/version.json ./version.json
 
 # 録音用ディレクトリとデータ用ディレクトリの作成
 RUN mkdir -p records data data/whisper-cache && chown nextjs:nodejs records data data/whisper-cache
