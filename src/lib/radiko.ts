@@ -256,7 +256,10 @@ export class RadikoClient {
      */
     async search(keyword: string, filter: 'future' | 'past' | 'all' = 'all'): Promise<Program[]> {
         const auth = await this.getAuthToken();
-        let url = `https://radiko.jp/v3/api/program/search?key=${encodeURIComponent(keyword)}&area_id=${auth.area_id}`;
+        let url = `https://radiko.jp/v3/api/program/search?key=${encodeURIComponent(keyword)}`;
+        if (!this.areaFree) {
+            url += `&area_id=${auth.area_id}`;
+        }
         if (filter !== 'all') {
             url += `&filter=${filter}`;
         }
