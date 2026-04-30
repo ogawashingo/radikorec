@@ -49,14 +49,11 @@ export default function Home() {
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
             ダッシュボード
           </h1>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-x-4">
-            <p className="text-slate-500 mt-1">録音状況の概要</p>
-            {gitInfo && (
-              <p className="text-xs text-slate-400 mt-1 font-mono">
-                ver: {gitInfo.hash} ({gitInfo.date})
-              </p>
-            )}
-          </div>
+          {gitInfo && (
+            <p className="text-xs text-slate-400 mt-1 font-mono">
+              ver: {gitInfo.hash} ({gitInfo.date})
+            </p>
+          )}
         </div>
         <Link
           href="/schedules/new"
