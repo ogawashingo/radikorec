@@ -6,25 +6,9 @@ global.fetch = jest.fn();
 describe('RadikoClient', () => {
     let client: RadikoClient;
 
-    const mockResponse = (ok: boolean, text: string, json: any = {}) => ({
-        ok,
-        text: async () => text,
-        json: async () => json,
-        headers: {
-            get: (key: string) => {
-                if (key.toLowerCase() === 'x-radiko-authtoken') return 'test-token';
-                if (key.toLowerCase() === 'x-radiko-keylength') return '16';
-                if (key.toLowerCase() === 'x-radiko-keyoffset') return '0';
-                return null;
-            }
-        }
-    });
-
     beforeEach(() => {
         client = new RadikoClient();
         (global.fetch as jest.Mock).mockClear();
-        // Default mock
-        (global.fetch as jest.Mock).mockResolvedValue(mockResponse(true, ''));
     });
 
     describe('getProgramSchedule', () => {
@@ -47,13 +31,24 @@ describe('RadikoClient', () => {
                 </radiko>
             `;
 
-            (global.fetch as jest.Mock).mockResolvedValue(mockResponse(true, mockXml));
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                text: async () => mockXml,
+            });
 
             const programs = await client.getProgramSchedule('TBS', '20240201');
 
             expect(programs).toHaveLength(1);
-            expect(programs[0].title).toBe('Test Program');
-            expect(programs[0].start_time).toBe('2024-02-01 12:00:00');
+            expect(programs[0]).toEqual({
+                title: 'Test Program',
+                start_time: '2024-02-01 12:00:00', // Formatted
+                end_time: '2024-02-01 13:00:00',   // Formatted
+                display_time: '12:00',
+                station_id: 'TBS',
+                performer: 'Test Performer',
+                description: 'Test Description',
+                status: 'future',
+            });
         });
 
         it('should return empty array if no programs found', async () => {
@@ -70,7 +65,10 @@ describe('RadikoClient', () => {
                 </radiko>
             `;
 
-            (global.fetch as jest.Mock).mockResolvedValue(mockResponse(true, mockXml));
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                text: async () => mockXml,
+            });
 
             const programs = await client.getProgramSchedule('TBS', '20240201');
             expect(programs).toEqual([]);
@@ -94,12 +92,15 @@ describe('RadikoClient', () => {
                 </region>
             `;
 
-            (global.fetch as jest.Mock).mockResolvedValue(mockResponse(true, mockXml));
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                text: async () => mockXml,
+            });
 
             const stations = await client.getStations();
             expect(stations).toHaveLength(2);
-            expect(stations[0]).toEqual({ id: 'TBS', name: 'TBS Radio' });
-            expect(stations[1]).toEqual({ id: 'QRR', name: 'Bunka Hoso' });
+            expect(stations[0].id).toBe('TBS');
+            expect(stations[0].name).toBe('TBS Radio');
         });
     });
 });

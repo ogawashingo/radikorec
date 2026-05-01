@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { drizzleDb } from '@/lib/db';
 import { schedules, records } from '@/lib/schema';
 import { desc, asc, sql } from 'drizzle-orm';
-import { Plus, Clock, Disc } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ScheduleList } from '@/components/ScheduleList';
 import { RecordList } from '@/components/RecordList';
 import { LogViewer } from '@/components/LogViewer';
@@ -38,7 +38,6 @@ export default function Home() {
   const otherUsedSpace = Math.max(0, totalSpace - freeSpace - radikoUsedSpace);
   const radikoPercent = totalSpace > 0 ? (radikoUsedSpace / totalSpace) * 100 : 0;
   const otherPercent = totalSpace > 0 ? (otherUsedSpace / totalSpace) * 100 : 0;
-  const freePercent = totalSpace > 0 ? (freeSpace / totalSpace) * 100 : 0;
   const gitInfo = getGitInfo();
 
   return (

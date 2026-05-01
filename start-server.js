@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
@@ -49,7 +50,7 @@ function sendDiscordNotification(message) {
         },
     };
 
-    const req = client.request(options, (res) => {
+    const req = client.request(options, () => {
         // レスポンスのハンドリング（今回は無視）
     });
 
