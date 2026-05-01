@@ -27,7 +27,7 @@ export function getGitInfo() {
       date,
       message,
     };
-  } catch (error) {
+  } catch {
     // Gitコマンドが失敗してもエラーログを出さない（Docker環境では想定内）
     return null;
   }

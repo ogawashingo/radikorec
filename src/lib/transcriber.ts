@@ -91,7 +91,7 @@ export async function transcribeAudio(
                     elapsed: raw.elapsed,
                     fullText,
                 });
-            } catch (e) {
+            } catch {
                 reject(new Error(`JSON解析失敗: ${stdout.slice(0, 200)}`));
             }
         });

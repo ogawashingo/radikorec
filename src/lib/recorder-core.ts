@@ -46,25 +46,21 @@ export class RadikoRecorder {
 
             const url = new URL(liveStreamUrl);
             url.searchParams.set('station_id', stationId);
-            url.searchParams.set('l', '60'); // 504エラーを避けるため短め(1分)に設定
-            url.searchParams.set('lsid', lsid); // 安定性のために維持
-            url.searchParams.set('type', 'c'); // チャンク形式を使用
+            url.searchParams.set('l', '15');
+            url.searchParams.set('lsid', lsid); // セッション維持のため lsid を復活 (ランダム生成)
+            url.searchParams.set('type', 'c'); // type=c は維持
 
             const fullUrl = url.toString();
             // ライブ録画でもエリア認証が必要な場合があるため ID を追加
             const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            let headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\nUser-Agent: ${userAgent}\r\n`;
-            
-            // プレミアム会員の場合はセッションCookieを追加
-            if (auth.radiko_session) {
-                headers += `Cookie: radiko_session=${auth.radiko_session}\r\n`;
-            }
+            const headers = `X-Radiko-Authtoken: ${auth.authtoken}\r\nX-Radiko-AreaId: ${auth.area_id}\r\n`;
 
             const ffmpegArgs = [
                 '-nostdin',
                 '-loglevel', 'warning', // エラー原因特定のため詳細化
                 '-fflags', '+discardcorrupt',
                 '-headers', headers,
+                '-user_agent', userAgent,
                 '-http_seekable', '0',
                 '-rw_timeout', '30000000', // 30秒タイムアウト (マイクロ秒)
                 '-multiple_requests', '1', // HTTP keep-alive
