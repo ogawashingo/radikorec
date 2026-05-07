@@ -386,7 +386,7 @@ export function RecordList({ records }: { records: Record[] }) {
                   "p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50/50 transition-colors pl-6",
                   !isGrouped && "bg-white border border-slate-200 rounded-2xl pl-4 hover:border-radiko-blue/30 hover:shadow-lg hover:shadow-blue-100/50"
                 )}>
-                  <div className="flex items-start sm:items-center space-x-4 w-full">
+                  <div className="flex items-start sm:items-center space-x-4 flex-1 min-w-0">
                     <button
                       onClick={() => playRecord(record)}
                       className={twMerge(
@@ -454,7 +454,7 @@ export function RecordList({ records }: { records: Record[] }) {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <div className="text-sm font-bold text-slate-800 break-words line-clamp-2 md:line-clamp-1">
+                        <div className="text-sm font-bold text-slate-800 truncate">
                           {record.filename}
                         </div>
                         {record.is_watched === 0 && (
@@ -497,7 +497,7 @@ export function RecordList({ records }: { records: Record[] }) {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 w-full sm:w-auto justify-end border-t border-slate-100 sm:border-0 pt-2 sm:pt-0">
+                  <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0 justify-end border-t border-slate-100 sm:border-0 pt-2 sm:pt-0">
                     {/* 文字起こしボタン */}
                     {record.transcript_status === 'processing' || transcribingFiles.has(record.filename) ? (
                       <button
