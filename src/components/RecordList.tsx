@@ -58,6 +58,7 @@ export function RecordList({ records }: { records: Record[] }) {
   // グループ化の状態
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [deleteFilename, setDeleteFilename] = useState<string | null>(null);
+  const [deleteGroup, setDeleteGroup] = useState<{ title: string, filenames: string[] } | null>(null);
 
   // 文字起こし関連のState
   const [transcribingFiles, setTranscribingFiles] = useState<Set<string>>(new Set());
@@ -132,10 +133,44 @@ export function RecordList({ records }: { records: Record[] }) {
     setDeleteFilename(null);
 
     try {
-      const res = await fetch(`/api/records?file=${encodeURIComponent(deleteFilename)}`, {
+      const res = await fetch(`/api/records`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: deleteFilename })
+      });
+      if (!res.ok) {
+        let errText = `HTTP ${res.status}`;
+        try {
+          const data = await res.json();
+          if (data.error) errText = data.error;
+        } catch {
+          // fallback
+        }
+        throw new Error(errText);
+      }
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      setOptimisticRecords(previous);
+      alert('削除に失敗しました: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  const executeBatchDelete = async () => {
+    if (!deleteGroup) return;
+
+    const { filenames } = deleteGroup;
+    // 楽観的更新
+    const previous = optimisticRecords;
+    const filenamesSet = new Set(filenames);
+    setOptimisticRecords(prev => prev.filter(r => !filenamesSet.has(r.filename)));
+    setDeleteGroup(null);
+
+    try {
+      const res = await fetch(`/api/records`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filenames })
       });
       if (!res.ok) {
         let errText = `HTTP ${res.status}`;
@@ -306,11 +341,11 @@ export function RecordList({ records }: { records: Record[] }) {
           !isGrouped && "border-0 shadow-none bg-transparent"
         )}>
           {isGrouped && (
-            <button
-              onClick={() => toggleGroup(group.title)}
-              className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center space-x-3 text-left">
+            <div className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors group/header">
+              <button
+                onClick={() => toggleGroup(group.title)}
+                className="flex-1 flex items-center space-x-3 text-left"
+              >
                 <div className="p-2 bg-blue-50 rounded-xl">
                   <Folder className="w-5 h-5 text-radiko-blue" />
                 </div>
@@ -318,13 +353,27 @@ export function RecordList({ records }: { records: Record[] }) {
                 <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                   {group.items.length}
                 </span>
-              </div>
-              {expandedGroups.has(group.title) ? (
-                <ChevronDown className="w-5 h-5 text-slate-300" />
-              ) : (
-                <ChevronRight className="w-5 h-5 text-slate-300" />
-              )}
-            </button>
+                {expandedGroups.has(group.title) ? (
+                  <ChevronDown className="w-5 h-5 text-slate-300" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-slate-300" />
+                )}
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteGroup({
+                    title: group.title,
+                    filenames: group.items.map(i => i.filename)
+                  });
+                }}
+                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover/header:opacity-100"
+                title="この番組の録音をすべて削除"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
           )}
 
           {(expandedGroups.has(group.title) || !isGrouped) && (
@@ -526,11 +575,17 @@ export function RecordList({ records }: { records: Record[] }) {
       ))
       }
       <ConfirmDialog
-        isOpen={!!deleteFilename}
-        onClose={() => setDeleteFilename(null)}
-        onConfirm={executeDelete}
-        title="ファイルの削除"
-        message="本当に削除してもよろしいですか？ ファイルは完全に削除されます。"
+        isOpen={!!deleteFilename || !!deleteGroup}
+        onClose={() => {
+          setDeleteFilename(null);
+          setDeleteGroup(null);
+        }}
+        onConfirm={deleteGroup ? executeBatchDelete : executeDelete}
+        title={deleteGroup ? "番組の一括削除" : "ファイルの削除"}
+        message={deleteGroup
+          ? `番組「${deleteGroup.title}」の録音ファイル（${deleteGroup.filenames.length}件）をすべて削除してもよろしいですか？`
+          : "本当に削除してもよろしいですか？ ファイルは完全に削除されます。"
+        }
         isDestructive={true}
       />
       <TranscriptViewer

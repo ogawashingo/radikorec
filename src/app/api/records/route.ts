@@ -74,53 +74,69 @@ export async function DELETE(request: Request) {
         const fileParam = url.searchParams.get('file');
 
         let filename = fileParam;
-        if (!filename) {
-            try {
-                const body = await request.json();
+        let filenames: string[] = [];
+
+        try {
+            const body = await request.json();
+            if (body.filenames && Array.isArray(body.filenames)) {
+                filenames = body.filenames;
+            } else if (body.filename) {
                 filename = body.filename;
-            } catch {
-                // Ignore JSON parse errors if we don't have a body
             }
+        } catch {
+            // Ignore JSON parse errors if we don't have a body or it's not JSON
         }
 
-        if (!filename) {
-            return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
+        if (!filename && filenames.length === 0) {
+            return NextResponse.json({ error: 'Filename or filenames array is required' }, { status: 400 });
         }
 
-        // Decode the filename cleanly handles query parameters
-        filename = decodeURIComponent(filename);
+        // If a single filename is provided, put it in the array to unify processing
+        if (filename && filenames.length === 0) {
+            filenames = [filename];
+        }
 
-        // Prevent path traversal
-        const safeFilename = path.basename(filename);
-
+        const results = [];
         const recordsDir = path.join(process.cwd(), 'public', 'records');
-        const filePath = path.join(recordsDir, safeFilename);
 
-        // Delete from DB
-        const result = drizzleDb.delete(records).where(eq(records.filename, safeFilename)).run();
+        for (const rawFilename of filenames) {
+            // Decode the filename cleanly handles query parameters
+            const decodedFilename = decodeURIComponent(rawFilename);
+            // Prevent path traversal
+            const safeFilename = path.basename(decodedFilename);
+            const filePath = path.join(recordsDir, safeFilename);
 
-        if (result.changes === 0) {
-            return NextResponse.json({ error: `データベース上にファイル ${safeFilename} の記録が見つかりませんでした (削除件数: 0)` }, { status: 404 });
-        }
+            // Delete from DB
+            const dbResult = drizzleDb.delete(records).where(eq(records.filename, safeFilename)).run();
 
-        // Delete from Filesystem
-        if (fs.existsSync(filePath)) {
-            try {
-                fs.unlinkSync(filePath);
-            } catch (e) {
-                const err = e as Error;
-                console.error('Failed to unlink file:', err);
-                return NextResponse.json({ error: `DB record deleted but failed to delete file from disk: ${err.message}` }, { status: 500 });
+            // Delete from Filesystem
+            let fileDeleted = false;
+            if (fs.existsSync(filePath)) {
+                try {
+                    fs.unlinkSync(filePath);
+                    fileDeleted = true;
+                } catch (e) {
+                    console.error(`Failed to unlink file ${safeFilename}:`, e);
+                }
             }
-        } else {
-            console.warn(`File not found on disk: ${filePath}`);
+
+            results.push({
+                filename: safeFilename,
+                dbChanges: dbResult.changes,
+                fileDeleted
+            });
         }
 
-        return NextResponse.json({ success: true });
+        const totalDbChanges = results.reduce((acc, curr) => acc + curr.dbChanges, 0);
+        if (totalDbChanges === 0 && filenames.length === 1) {
+            return NextResponse.json({ error: `データベース上にファイル ${filenames[0]} の記録が見つかりませんでした` }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, results });
     } catch (error) {
         const err = error as Error;
-        console.error('Error deleting record:', err);
-        return NextResponse.json({ error: `Failed to delete record: ${err.message}` }, { status: 500 });
+        console.error('Error deleting records:', err);
+        return NextResponse.json({ error: `Failed to delete records: ${err.message}` }, { status: 500 });
     }
 }
 
