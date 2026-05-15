@@ -457,11 +457,6 @@ export function RecordList({ records }: { records: Record[] }) {
                         <div className="text-sm font-bold text-slate-800 truncate">
                           {record.filename}
                         </div>
-                        {record.is_watched === 0 && (
-                          <span className="shrink-0 bg-red-100 text-red-600 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-red-200 uppercase tracking-wider">
-                            NEW
-                          </span>
-                        )}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 font-bold">
                         <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase border border-slate-200">
